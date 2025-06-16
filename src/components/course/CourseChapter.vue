@@ -342,9 +342,8 @@ onMounted(async () => {
 
   if (courseId.value) {
     try {
-      const rawContent = await getCourseContent(courseId.value);
-      // The server response is a JSON-encoded string, so we need to parse it.
-      markdownContent.value = JSON.parse(rawContent);
+      const content = await getCourseContent(courseId.value);
+      markdownContent.value = content;
       parseOutline();
 
       await nextTick();
