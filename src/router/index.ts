@@ -34,6 +34,12 @@ const routes: Array<RouteRecordRaw> = [
         name: 'CourseDesign',
         component: () => import('../views/teacher/CourseDesignView.vue'),
       },
+      {
+        path: 'courses',
+        name: 'MyCourses',
+        component: () => import('../views/teacher/MyCoursesView.vue'),
+        meta: { requiresAuth: true, roles: ['teacher'] }
+      }
     ],
   },
   // Add other layouts and routes for student, admin here

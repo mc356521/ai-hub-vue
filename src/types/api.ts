@@ -27,4 +27,28 @@ export interface LoginResponseData {
   token: string;
   // 可能还有其他用户数据
   [key: string]: any;
+}
+
+// 课程对象
+export interface Courses {
+  id: number;
+  createTime: string;
+  updateTime: string;
+  deleted: number;
+  title: string;
+  description: string;
+  teacherId: number;
+  filePath: string;
+  fileHash: string;
+  fileUpdatedAt: string;
+  parseStatus: string;
+  parseError: string;
+  parsedAt: string;
+  chapterCount: number;
+}
+
+// 创建课程请求体
+export interface CreateCourseRequest {
+  title: string;
+  description?: string;
 } 
