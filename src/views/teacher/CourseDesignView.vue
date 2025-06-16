@@ -42,10 +42,7 @@
         <div v-if="activeTab === 'tasks'">
           <p>学习任务内容...</p>
         </div>
-        <!-- Add other tab contents here -->
-         <div v-else class="text-center text-gray-500 py-10">
-          <p>功能正在建设中...</p>
-        </div>
+   
       </div>
     </div>
   </div>

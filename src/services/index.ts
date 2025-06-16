@@ -2,7 +2,6 @@ import axios from 'axios';
 import { useUserStore } from '../store/user';
 
 const apiClient = axios.create({
-  baseURL: '/api',
   timeout: 10000, // 请求超时时间
 });
 

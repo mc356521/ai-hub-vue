@@ -6,7 +6,7 @@ import type { Courses, CreateCourseRequest } from '../types/api';
  * @returns 课程列表
  */
 export const getMyCourses = (): Promise<Courses[]> => {
-  return apiClient.get('/courses/my');
+  return apiClient.get('/api/courses/my');
 };
 
 /**
@@ -15,5 +15,28 @@ export const getMyCourses = (): Promise<Courses[]> => {
  * @returns 创建成功后的课程对象
  */
 export const createCourse = (courseData: CreateCourseRequest): Promise<Courses> => {
-    return apiClient.post('/courses', courseData);
+    return apiClient.post('/api/courses', courseData);
+};
+
+/**
+ * 获取指定课程的Markdown原文
+ * @param courseId - 课程ID
+ * @returns 课程内容的字符串
+ */
+export const getCourseContent = (courseId: number): Promise<string> => {
+  return apiClient.get(`/api/courses/${courseId}/content`);
+};
+
+/**
+ * 更新指定课程的Markdown原文
+ * @param courseId - 课程ID
+ * @param content - 新的Markdown内容
+ * @returns 更新结果
+ */
+export const updateCourseContent = (courseId: number, content: string): Promise<any> => {
+  return apiClient.put(`/api/courses/${courseId}/content`, content, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
 }; 
