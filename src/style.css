@@ -64,17 +64,18 @@
     }
 }
 
+html,
+#app {
+    background-color: transparent;
+}
+
 body {
+    background-color: var(--color-quantum-gray);
     margin: 0;
     padding: 0;
     font-family: 'Inter', 'sans-serif';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-}
-
-h1 {
-    color: #333;
-    text-align: center;
 }
 
 

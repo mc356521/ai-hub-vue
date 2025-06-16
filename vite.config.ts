@@ -12,13 +12,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // 当请求路径以 /api 开头时，启用代理
+      // 代理所有 /api 开头的请求
       '/api': {
-        // 目标后端服务地址
-        target: 'http://localhost:8080', 
-        // 需要虚拟主机站点，启用该配置后，Vite 会将请求头中的 host 修改为目标地址
+        target: 'http://localhost:8080', // 请确保这是您的后端服务地址
         changeOrigin: true,
-        // 重写请求路径，去掉 /api 前缀
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     }

@@ -1,7 +1,7 @@
 <template>
   <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <h1 class="text-2xl font-bold text-graphite-black">我的课程管理</h1>
-    <button @click="handleCreateCourse" class="w-full sm:w-auto justify-center px-4 py-2 bg-wisdom-blue text-white rounded-md text-sm font-medium hover:bg-wisdom-blue/90 flex items-center">
+    <button @click="isCreateModalVisible = true" class="w-full sm:w-auto justify-center px-4 py-2 bg-wisdom-blue text-white rounded-md text-sm font-medium hover:bg-wisdom-blue/90 flex items-center">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
       </svg>
@@ -50,16 +50,20 @@
       </div>
     </div>
   </div>
+  
+  <CreateCourseModal v-model:visible="isCreateModalVisible" @create="handleCreateCourse" />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { getMyCourses, createCourse } from '../../services/courseService';
 import type { Courses } from '../../types/api';
+import CreateCourseModal from '../../components/course/CreateCourseModal.vue';
 
 const courses = ref<Courses[]>([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+const isCreateModalVisible = ref(false);
 
 const fetchCourses = async () => {
   try {
@@ -73,15 +77,13 @@ const fetchCourses = async () => {
   }
 };
 
-const handleCreateCourse = async () => {
-  const title = prompt('请输入新课程的名称:');
-  if (title) {
-    try {
-      const newCourse = await createCourse({ title });
-      courses.value.unshift(newCourse); // 将新课程添加到列表顶部
-    } catch (err: any) {
-      alert(`创建课程失败: ${err.message}`);
-    }
+const handleCreateCourse = async (courseData: { title: string; description?: string }) => {
+  try {
+    // 后端可能不需要 description，但我们以接口定义为准
+    const newCourse = await createCourse(courseData);
+    courses.value.unshift(newCourse); // 将新课程添加到列表顶部
+  } catch (err: any) {
+    alert(`创建课程失败: ${err.message}`);
   }
 };
 
