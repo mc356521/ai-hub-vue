@@ -104,9 +104,11 @@
           v-html="renderedHtml" 
           class="prose prose-sm max-w-none md:h-[calc(100vh_-_22rem)] min-h-[400px] border border-gray-200 rounded-md p-4 overflow-y-auto">
         </div>
-        <div v-else class="flex-1 flex flex-col min-h-[590px]">
+        <div v-else class="flex-1 flex flex-col min-h-[400px]">
           <textarea
+            ref="editorPanel"
             v-model="editableContent"
+            @scroll.passive="handleEditorScroll"
             class="w-full flex-1 border border-gray-300 rounded-md p-4 font-mono text-sm focus:ring-wisdom-blue focus:border-wisdom-blue resize-none"
             placeholder="在此输入Markdown内容..."
           ></textarea>
@@ -140,6 +142,7 @@ interface OutlineItem {
   level: number;
   content: string;
   id: string;
+  lineNumber: number;
 }
 
 interface NestedOutlineItem extends OutlineItem {
@@ -151,6 +154,7 @@ const courseId = ref<number | null>(null);
 const markdownContent = ref('');
 const outline = ref<NestedOutlineItem[]>([]);
 const previewPanel = ref<HTMLElement | null>(null);
+const editorPanel = ref<HTMLTextAreaElement | null>(null);
 const outlinePanel = ref<HTMLElement | null>(null);
 const activeAnchorId = ref<string | null>(null);
 const expandedChapters = ref<Set<string>>(new Set());
@@ -159,6 +163,8 @@ let anchorElements: HTMLElement[] = [];
 const isEditing = ref(false);
 const editableContent = ref('');
 const isSaving = ref(false);
+const lineHeight = ref(0);
+let editorScrollTimer: number | null = null;
 
 // Function to create a URL-friendly slug
 const slugify = (s: string) => String(s).trim().toLowerCase().replace(/\s+/g, '-').replace(/[?？,，。.]/g, '');
@@ -192,10 +198,11 @@ const parseOutline = () => {
       
       // The markdown-it-anchor plugin adds the ID to the token's attributes
       const id = token.attrGet('id') || slugify(content);
+      const lineNumber = token.map ? token.map[0] : 0;
 
       if (!id) continue;
 
-      const newItem: OutlineItem = { level, content, id };
+      const newItem: OutlineItem = { level, content, id, lineNumber };
       if (level === 1) {
         const nestedItem: NestedOutlineItem = { ...newItem, children: [] };
         result.push(nestedItem);
@@ -297,11 +304,25 @@ const handleScroll = () => {
 };
 
 const scrollToAnchor = (id: string) => {
-  activeAnchorId.value = id; 
-  const element = document.getElementById(id);
+  activeAnchorId.value = id;
   
-  if (element && previewPanel.value && previewPanel.value.contains(element)) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const allHeadings = outline.value.reduce((acc, chapter) => {
+    acc.push(chapter);
+    chapter.children.forEach(child => acc.push(child));
+    return acc;
+  }, [] as (NestedOutlineItem | OutlineItem)[]);
+  const targetItem = allHeadings.find(item => item.id === id);
+
+  if (isEditing.value) {
+    if (editorPanel.value && lineHeight.value && targetItem) {
+      const targetScrollTop = targetItem.lineNumber * lineHeight.value;
+      editorPanel.value.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+    }
+  } else {
+    const element = document.getElementById(id);
+    if (element && previewPanel.value && previewPanel.value.contains(element)) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 };
 
@@ -335,6 +356,51 @@ const handleSave = async () => {
     isSaving.value = false;
   }
 };
+
+const handleEditorScroll = () => {
+  if (!editorPanel.value || !lineHeight.value) return;
+
+  if (editorScrollTimer) {
+    window.cancelAnimationFrame(editorScrollTimer);
+  }
+
+  editorScrollTimer = window.requestAnimationFrame(() => {
+    const scrollTop = editorPanel.value!.scrollTop;
+    const currentTopLine = Math.floor((scrollTop + 5) / lineHeight.value);
+
+    const allHeadings = outline.value.reduce((acc, chapter) => {
+      acc.push({ id: chapter.id, lineNumber: chapter.lineNumber });
+      chapter.children.forEach(child => {
+        acc.push({ id: child.id, lineNumber: child.lineNumber });
+      });
+      return acc;
+    }, [] as { id: string, lineNumber: number }[]);
+
+    let currentActiveId: string | null = null;
+    for (const heading of allHeadings) {
+      if (heading.lineNumber <= currentTopLine) {
+        currentActiveId = heading.id;
+      } else {
+        break;
+      }
+    }
+
+    if (currentActiveId && activeAnchorId.value !== currentActiveId) {
+      activeAnchorId.value = currentActiveId;
+    }
+  });
+};
+
+watch(isEditing, (editing) => {
+  if (editing) {
+    nextTick(() => {
+      if (editorPanel.value) {
+        const style = window.getComputedStyle(editorPanel.value);
+        lineHeight.value = parseFloat(style.lineHeight);
+      }
+    });
+  }
+});
 
 onMounted(async () => {
   const idFromRoute = 1; 

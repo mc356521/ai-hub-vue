@@ -36,7 +36,7 @@ export const getCourseContent = (courseId: number): Promise<string> => {
 export const updateCourseContent = (courseId: number, content: string): Promise<any> => {
   return apiClient.put(`/api/courses/${courseId}/content`, content, {
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'text/plain'
     }
   });
 }; 
