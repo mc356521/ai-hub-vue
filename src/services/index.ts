@@ -1,18 +1,20 @@
 import axios from 'axios';
+import { useUserStore } from '../store/user';
 
-const service = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || '/api', // Set base URL from env variables or default to /api
-  timeout: 10000, // Request timeout
+const apiClient = axios.create({
+  baseURL: '/api', // 所有请求都将以 /api 开头，由 Vite 代理
+  timeout: 10000, // 请求超时时间
 });
 
-// Request interceptor
-service.interceptors.request.use(
+// 请求拦截器
+apiClient.interceptors.request.use(
   (config) => {
-    // You can add token to headers here if needed
-    // const token = useUserStore().token;
-    // if (token) {
-    //   config.headers['Authorization'] = `Bearer ${token}`;
-    // }
+    const userStore = useUserStore();
+    const token = userStore.token;
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -20,17 +22,24 @@ service.interceptors.request.use(
   }
 );
 
-// Response interceptor
-service.interceptors.response.use(
+// 响应拦截器
+apiClient.interceptors.response.use(
   (response) => {
-    // You can handle response data here
-    return response.data;
+    // 后端返回的结构体是 { success, code, message, data }
+    // 我们只关心 data 部分，或者在失败时关心 message
+    if (response.data.success) {
+      return response.data;
+    } else {
+      // 在这里可以进行统一的错误提示，例如使用一个UI库的Message组件
+      console.error('API Error:', response.data.message);
+      return Promise.reject(new Error(response.data.message || 'Error'));
+    }
   },
   (error) => {
-    // You can handle global errors here
-    console.error('API Error:', error);
+    // 处理网络错误等
+    console.error('Network Error:', error);
     return Promise.reject(error);
   }
 );
 
-export default service; 
+export default apiClient; 

@@ -71,6 +71,7 @@
 import { ref, computed, onMounted, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore, UserRole } from '../../store/user';
+import { login } from '../../services/authService';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -79,6 +80,7 @@ const username = ref('');
 const password = ref('');
 const activeTab = ref<UserRole>('student');
 const isDarkMode = ref(false);
+const errorMsg = ref<string | null>(null);
 
 const starStyles = reactive<any[]>([]);
 
@@ -106,10 +108,38 @@ const getTabClass = (tab: UserRole) => {
   return `${baseClass} border-transparent text-quantum-gray/70 hover:text-quantum-gray`;
 };
 
-const handleLogin = () => {
-  userStore.login(username.value, activeTab.value);
-  // You might want to redirect based on role in the future
-  router.push('/dashboard');
+const handleLogin = async () => {
+  errorMsg.value = null;
+  if (!username.value || !password.value) {
+    errorMsg.value = '请输入用户名和密码';
+    alert(errorMsg.value);
+    return;
+  }
+
+  try {
+    const response = await login({
+      username: username.value,
+      password: password.value,
+    });
+
+    // 登录成功，调用 Pinia store action
+    // 注意：这里的 activeTab 仅用于UI切换，实际角色应由后端返回
+    // 为简化，我们暂时相信用户在UI上选择的角色
+    userStore.login(username.value, activeTab.value, response.token);
+
+    // 根据角色跳转到不同仪表盘
+    if (activeTab.value === 'teacher') {
+      router.push('/'); // TeacherLayout 默认路由
+    } else {
+      // 假设学生和管理员有其他路由
+      router.push('/'); // 暂时都跳到教师仪表盘
+    }
+
+  } catch (error: any) {
+    console.error('登录失败:', error);
+    errorMsg.value = error.message || '登录失败，请检查用户名或密码。';
+    alert(errorMsg.value);
+  }
 };
 
 const toggleDarkMode = () => {

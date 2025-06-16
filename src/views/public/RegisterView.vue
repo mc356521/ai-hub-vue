@@ -93,9 +93,12 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
+import { register } from '../../services/authService';
+import type { RegisterRequest } from '../../types/api';
 
-const activeTab = ref('student');
+const activeTab = ref<'student' | 'teacher'>('student');
 const router = useRouter();
+const errorMsg = ref<string | null>(null);
 
 const formData = reactive({
   username: '',
@@ -107,34 +110,52 @@ const formData = reactive({
   agreement: false,
 });
 
-const handleRegister = () => {
-  if (validateForm()) {
-    // 模拟注册成功
-    console.log('注册信息:', { role: activeTab.value, ...formData });
-    
-    // 模拟API调用延迟后跳转
-    setTimeout(() => {
-      router.push('/login');
-    }, 1000);
+const handleRegister = async () => {
+  errorMsg.value = null; // Reset error message
+  if (!validateForm()) {
+    return;
+  }
+
+  const requestData: RegisterRequest = {
+    username: formData.username,
+    email: formData.email,
+    password: formData.password,
+    role: activeTab.value,
+    userCode: activeTab.value === 'student' ? formData.studentId : formData.teacherId,
+  };
+
+  try {
+    await register(requestData);
+    // 注册成功，可以给一个提示，然后跳转到登录页
+    alert('注册成功！即将跳转到登录页面。');
+    router.push('/login');
+  } catch (error: any) {
+    console.error('注册失败:', error);
+    errorMsg.value = error.message || '注册失败，请稍后重试。';
+    alert(errorMsg.value);
   }
 };
 
 const validateForm = () => {
   const { username, email, password, confirmPassword, agreement } = formData;
   if (!username || !email || !password || !confirmPassword) {
-    alert('请填写所有必填字段');
+    errorMsg.value = '请填写所有必填字段';
+    alert(errorMsg.value);
     return false;
   }
   if (password.length < 8) {
-    alert('密码长度不能少于8位');
+    errorMsg.value = '密码长度不能少于8位';
+    alert(errorMsg.value);
     return false;
   }
   if (password !== confirmPassword) {
-    alert('两次输入的密码不一致');
+    errorMsg.value = '两次输入的密码不一致';
+    alert(errorMsg.value);
     return false;
   }
   if (!agreement) {
-    alert('请阅读并同意服务条款和隐私政策');
+    errorMsg.value = '请阅读并同意服务条款和隐私政策';
+    alert(errorMsg.value);
     return false;
   }
   return true;
