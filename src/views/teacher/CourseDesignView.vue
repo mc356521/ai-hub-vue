@@ -25,9 +25,11 @@
           </nav>
           <div v-if="tabs.find(t => t.id === activeTab)?.showClassSelector" class="flex-shrink-0">
             <label for="classSelector" class="text-sm font-medium text-quantum-gray mr-2">当前班级:</label>
-            <select id="classSelector" class="w-60 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-energy-cyan/50">
-              <option value="fe-2023">2023级前端班</option>
-              <option value="se-2022">22级软件工程(专升本)2班</option>
+            <select id="classSelector" v-model="selectedClassId" class="w-60 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-energy-cyan/50">
+              <option v-if="classes.length === 0" value="">加载中...</option>
+              <option v-for="cls in classes" :key="cls.id" :value="cls.id">
+                {{ cls.name }}
+              </option>
             </select>
           </div>
         </div>
@@ -53,7 +55,8 @@ import { ref, onMounted, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import CourseChapter from '../../components/course/CourseChapter.vue';
 import { getCourseById } from '@/services/courseService';
-import type { Courses } from '../../types/api';
+import { getMyClasses } from '@/services/classService';
+import type { Courses, MyClassInfo } from '../../types/api';
 import { ListBulletIcon, CheckCircleIcon, ChatBubbleLeftRightIcon, PencilSquareIcon, ShieldCheckIcon, FolderIcon } from '@heroicons/vue/24/outline';
 
 
@@ -64,6 +67,9 @@ const course = ref<Partial<Courses>>({
 });
 
 const activeTab = ref('chapters');
+const selectedClassId = ref<number | ''>('');
+const classes = ref<MyClassInfo[]>([]);
+
 const tabs = shallowRef([
   { id: 'chapters', name: '课程章节', icon: ListBulletIcon, showClassSelector: false },
   { id: 'tasks', name: '学习任务', icon: CheckCircleIcon, showClassSelector: true },
@@ -83,6 +89,17 @@ onMounted(async () => {
       course.value.title = '无法加载课程';
       course.value.description = '请检查网络连接或稍后再试。';
     }
+  }
+
+  try {
+    const activeClasses = await getMyClasses('active');
+    classes.value = activeClasses;
+    if (activeClasses.length > 0) {
+      selectedClassId.value = activeClasses[0].id;
+    }
+  } catch (error) {
+    console.error('Failed to fetch active classes:', error);
+    // Optionally, handle the error in the UI
   }
 });
 

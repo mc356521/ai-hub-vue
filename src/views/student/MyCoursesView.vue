@@ -48,8 +48,17 @@
       </button>
     </div>
 
+    <!-- 加载与错误提示 -->
+    <div v-if="isLoading" class="text-center py-10">
+      <p>正在加载您的课程...</p>
+    </div>
+    <div v-else-if="error" class="text-center py-10 bg-red-50 border border-red-200 rounded-md">
+      <p class="text-red-600 font-medium">课程加载失败</p>
+      <p class="text-red-500 text-sm mt-1">{{ error }}</p>
+    </div>
+
     <!-- 课程列表 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <!-- 课程卡片 -->
       <div v-for="course in filteredCourses" :key="course.id" class="bg-white rounded-lg shadow-card overflow-hidden course-card transition-all duration-300 hover:-translate-y-1 hover:shadow-hover">
         <div :class="['h-40 relative', course.gradientClass]">
@@ -151,34 +160,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { getMyStudentCourses } from '@/services/courseService';
+import type { StudentCourse, CourseCardData } from '@/types/api';
 
-// 课程类型定义
-interface Teacher {
-  name: string;
-  avatar: string;
-}
-
-interface Course {
-  id: number;
-  name: string;
-  description: string;
-  teacher: Teacher;
-  status: 'in-progress' | 'completed' | 'not-started';
-  progress: number;
-  gradientClass: string;
-  progressBarClass: string;
-  icon: any;
-}
-
-// 页面状态
-const searchQuery = ref('');
-const currentFilter = ref('all');
-const showJoinModal = ref(false);
-const courseCode = ref('');
-const joinError = ref(false);
-
-// 课程图标组件（使用内联SVG）
+// 课程图标组件（使用内联SVG模板，方便在v-for中动态渲染）
 const CodeIcon = {
   template: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -209,88 +195,101 @@ const PythonIcon = {
   </svg>`
 };
 
-// 示例课程数据
-const courses = ref<Course[]>([
-  {
-    id: 1,
-    name: 'JavaScript高级编程',
-    description: '前端开发核心技能',
-    teacher: {
-      name: '王教授',
-      avatar: 'https://ui-avatars.com/api/?name=王教授&background=2563EB&color=fff'
-    },
-    status: 'in-progress',
-    progress: 65,
-    gradientClass: 'bg-gradient-to-r from-wisdom-blue to-energy-cyan',
-    progressBarClass: 'bg-wisdom-blue',
-    icon: CodeIcon
-  },
-  {
-    id: 2,
-    name: '数据库原理与应用',
-    description: '关系型数据库设计与实现',
-    teacher: {
-      name: '刘教授',
-      avatar: 'https://ui-avatars.com/api/?name=刘教授&background=FBBF24&color=fff'
-    },
-    status: 'in-progress',
-    progress: 40,
-    gradientClass: 'bg-gradient-to-r from-academic-gold to-eco-green',
-    progressBarClass: 'bg-academic-gold',
-    icon: DatabaseIcon
-  },
-  {
-    id: 3,
-    name: '数据结构与算法',
-    description: '计算机科学基础课程',
-    teacher: {
-      name: '张教授',
-      avatar: 'https://ui-avatars.com/api/?name=张教授&background=8B5CF6&color=fff'
-    },
-    status: 'not-started',
-    progress: 0,
-    gradientClass: 'bg-gradient-to-r from-aurora-purple to-wisdom-blue',
-    progressBarClass: 'bg-aurora-purple',
-    icon: AlgorithmIcon
-  },
-  {
-    id: 4,
-    name: '计算机网络',
-    description: '网络协议与应用原理',
-    teacher: {
-      name: '陈教授',
-      avatar: 'https://ui-avatars.com/api/?name=陈教授&background=10B981&color=fff'
-    },
-    status: 'completed',
-    progress: 100,
-    gradientClass: 'bg-gradient-to-r from-eco-green to-energy-cyan',
-    progressBarClass: 'bg-eco-green',
-    icon: NetworkIcon
-  },
-  {
-    id: 5,
-    name: 'Python编程基础',
-    description: 'Python语言入门与应用',
-    teacher: {
-      name: '孙教授',
-      avatar: 'https://ui-avatars.com/api/?name=孙教授&background=00C1D4&color=fff'
-    },
-    status: 'in-progress',
-    progress: 85,
-    gradientClass: 'bg-gradient-to-r from-energy-cyan to-wisdom-blue',
-    progressBarClass: 'bg-energy-cyan',
-    icon: PythonIcon
-  }
-]);
+// 页面响应式状态
+const searchQuery = ref('');
+const currentFilter = ref('all');
+const showJoinModal = ref(false);
+const courseCode = ref('');
+const joinError = ref(false);
+const courses = ref<CourseCardData[]>([]);
+const isLoading = ref(true);
+const error = ref<string | null>(null);
 
-// 有效的课程口令
+// UI相关的辅助数据
+const ICONS = [CodeIcon, DatabaseIcon, AlgorithmIcon, NetworkIcon, PythonIcon];
+const GRADIENTS = [
+  'bg-gradient-to-r from-wisdom-blue to-energy-cyan',
+  'bg-gradient-to-r from-academic-gold to-eco-green',
+  'bg-gradient-to-r from-aurora-purple to-wisdom-blue',
+  'bg-gradient-to-r from-eco-green to-energy-cyan',
+  'bg-gradient-to-r from-energy-cyan to-wisdom-blue'
+];
+const PROGRESS_BAR_COLORS = [
+  'bg-wisdom-blue',
+  'bg-academic-gold',
+  'bg-aurora-purple',
+  'bg-eco-green',
+  'bg-energy-cyan'
+];
+
+/**
+ * 将API返回的学生课程数据转换为UI展示所需的课程卡片数据
+ * @param studentCourses - API返回的课程列表
+ * @returns 可以在UI上渲染的课程卡片数据列表
+ */
+const mapCoursesToCardData = (studentCourses: StudentCourse[]): CourseCardData[] => {
+  return studentCourses.map((course, index) => {
+    // 将后端classStatus映射为前端UI状态
+    let status: CourseCardData['status'] = 'not-started';
+    switch (course.classStatus) {
+      case 'active':
+        status = 'in-progress';
+        break;
+      case 'finished':
+        status = 'completed';
+        break;
+      case 'pending':
+        status = 'not-started'; // 假设pending是未开始
+        break;
+    }
+
+    const uiIndex = index % ICONS.length;
+
+    return {
+      id: course.courseId,
+      name: course.courseTitle,
+      description: course.courseDescription,
+      teacher: {
+        name: course.teacherName,
+        avatar: course.teacherAvatar || `https://ui-avatars.com/api/?name=${course.teacherName}&background=random`
+      },
+      status: status,
+      // TODO: 后续对接学习进度API
+      progress: status === 'completed' ? 100 : (status === 'not-started' ? 0 : Math.floor(Math.random() * 80) + 10),
+      gradientClass: GRADIENTS[uiIndex],
+      progressBarClass: PROGRESS_BAR_COLORS[uiIndex],
+      icon: ICONS[uiIndex]
+    };
+  });
+};
+
+
+const fetchCourses = async () => {
+  try {
+    isLoading.value = true;
+    error.value = null;
+    const studentCourses = await getMyStudentCourses();
+    courses.value = mapCoursesToCardData(studentCourses);
+  } catch (e: any) {
+    console.error('获取学生课程失败:', e);
+    error.value = e.message || '无法连接到服务器，请稍后重试。';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchCourses();
+});
+
+// 有效的课程口令 - 示例数据，实际应用中应由后端API进行验证
 const validCodes = ['JS-ADV-23', 'PY-BAS-22', 'DB-PRI-23', 'ALG-BAS-22'];
 
-// 状态过滤
+// 计算属性：根据搜索条件和状态筛选器动态过滤课程列表
 const filteredCourses = computed(() => {
   let result = courses.value;
   
-  // 搜索过滤
+  // 搜索过滤：如果搜索查询非空，则过滤课程
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     result = result.filter(course => 
@@ -300,7 +299,7 @@ const filteredCourses = computed(() => {
     );
   }
   
-  // 状态过滤
+  // 状态过滤：如果筛选器不是'all'，则按课程状态过滤
   if (currentFilter.value !== 'all') {
     result = result.filter(course => course.status === currentFilter.value);
   }
@@ -308,7 +307,12 @@ const filteredCourses = computed(() => {
   return result;
 });
 
-// 获取状态文本
+/**
+ * @function statusText
+ * @description 将课程状态标识符转换为用户友好的中文字符串
+ * @param {string} status - 课程状态标识符 ('in-progress', 'completed', 'not-started')
+ * @returns {string} 对应的中文状态名
+ */
 const statusText = (status: string) => {
   switch (status) {
     case 'in-progress':
@@ -317,22 +321,25 @@ const statusText = (status: string) => {
       return '已完成';
     case 'not-started':
       return '未开始';
+    case 'pending':
+      return '待处理'; // 虽然我们映射成了 'not-started'，但为未来扩展保留
     default:
       return '';
   }
 };
 
-// 加入课程
+// 处理加入课程的逻辑
 const joinCourse = () => {
+  // 对输入值进行 trim 和大小写转换，以提高匹配成功率
   const enteredCode = courseCode.value.trim().toUpperCase();
   if (validCodes.includes(enteredCode)) {
-    // TODO: 实际应用中，这里会调用API加入课程
+    // TODO: 实际应用中，这里会调用API服务，将当前用户加入指定课程/班级
     alert('成功加入课程！');
-    showJoinModal.value = false;
-    courseCode.value = '';
-    joinError.value = false;
+    showJoinModal.value = false; // 关闭模态框
+    courseCode.value = ''; // 清空输入框
+    joinError.value = false; // 重置错误状态
   } else {
-    joinError.value = true;
+    joinError.value = true; // 设置错误状态，UI将显示错误提示
   }
 };
 </script>

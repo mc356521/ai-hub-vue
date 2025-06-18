@@ -1,5 +1,5 @@
 import api from './index';
-import type { Courses, CreateCourseRequest, ApiResponse } from '@/types/api';
+import type { Courses, CreateCourseRequest, ApiResponse, StudentCourse } from '@/types/api';
 
 /**
  * 获取当前教师的课程列表
@@ -41,6 +41,16 @@ export const getCourseContent = async (courseId: number): Promise<string> => {
  * @param content 课程的Markdown内容
  */
 export const updateCourseContent = async (courseId: number, content: string): Promise<void> => {
-  console.log(`Updating course ${courseId} with content:`, content);
-  await api.put(`/courses/${courseId}/content`, { content });
-}; 
+  await api.put(`/courses/${courseId}/content`, content, {
+    headers: {
+      'Content-Type': 'text/plain;charset=UTF-8'
+    }
+  });
+};
+
+/**
+ * 获取当前学生的课程列表
+ */
+export function getMyStudentCourses(): Promise<StudentCourse[]> {
+  return api.get('/courses/my-student');
+} 

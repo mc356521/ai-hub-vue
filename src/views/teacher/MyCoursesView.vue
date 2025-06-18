@@ -60,11 +60,19 @@ import { getMyCourses, createCourse } from '../../services/courseService';
 import type { Courses } from '../../types/api';
 import CreateCourseModal from '../../components/course/CreateCourseModal.vue';
 
+// 响应式状态：存储教师创建的课程列表
 const courses = ref<Courses[]>([]);
+// 响应式状态：控制数据加载过程的loading状态
 const isLoading = ref(true);
+// 响应式状态：存储加载数据时可能发生的错误信息
 const error = ref<string | null>(null);
+// 响应式状态：控制"创建新课程"模态框的显示与隐藏
 const isCreateModalVisible = ref(false);
 
+/**
+ * @function fetchCourses
+ * @description 异步从后端获取教师的课程列表，并处理加载和错误状态
+ */
 const fetchCourses = async () => {
   try {
     isLoading.value = true;
@@ -77,22 +85,36 @@ const fetchCourses = async () => {
   }
 };
 
+/**
+ * @function handleCreateCourse
+ * @description 处理从模态框提交的新课程数据，调用API创建课程，并更新UI
+ * @param {object} courseData - 包含新课程标题和描述的对象
+ * @param {string} courseData.title - 课程标题
+ * @param {string} [courseData.description] - 课程描述 (可选)
+ */
 const handleCreateCourse = async (courseData: { title: string; description?: string }) => {
   try {
-    // 后端可能不需要 description，但我们以接口定义为准
     const newCourse = await createCourse(courseData);
-    courses.value.unshift(newCourse); // 将新课程添加到列表顶部
+    // 将新创建的课程添加到列表顶部，以便在UI中立即看到
+    courses.value.unshift(newCourse); 
   } catch (err: any) {
     alert(`创建课程失败: ${err.message}`);
   }
 };
 
+/**
+ * @function formatDate
+ * @description 将ISO格式的日期字符串转换为本地化的日期显示格式 (YYYY/MM/DD)
+ * @param {string} dateString - ISO 8601日期字符串
+ * @returns {string} 格式化后的日期字符串，如果输入无效则返回 'N/A'
+ */
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
   return date.toLocaleDateString();
 };
 
+// Vue生命周期钩子：在组件挂载到DOM后，调用fetchCourses函数以加载初始数据
 onMounted(() => {
   fetchCourses();
 });
