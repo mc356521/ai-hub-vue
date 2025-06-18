@@ -37,7 +37,7 @@
       <div class="p-4 md:p-6 flex-grow">
         <!-- Here we will render the content based on the active tab -->
         <div v-if="activeTab === 'chapters'">
-          <CourseChapter :course-id="course.id" />
+          <CourseChapter v-if="course.id" :course-id="course.id" />
         </div>
         <div v-if="activeTab === 'tasks'">
           <p>学习任务内容...</p>
@@ -52,7 +52,7 @@
 import { ref, onMounted, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import CourseChapter from '../../components/course/CourseChapter.vue';
-// import { getCourseById } from '@/services/courseService'; // This service needs to be created
+import { getCourseById } from '@/services/courseService';
 import type { Courses } from '../../types/api';
 import { ListBulletIcon, CheckCircleIcon, ChatBubbleLeftRightIcon, PencilSquareIcon, ShieldCheckIcon, FolderIcon } from '@heroicons/vue/24/outline';
 
@@ -77,16 +77,7 @@ onMounted(async () => {
   const courseId = Number(route.params.id);
   if (courseId) {
     try {
-      // **Placeholder**: In a real app, you would fetch course data here.
-      // const response = await getCourseById(courseId);
-      // course.value = response;
-
-      // Using mock data for now - but with the real ID
-      course.value = {
-        id: courseId,
-        title: `课程 ID: ${courseId}`, // Placeholder title
-        description: '课程内容正在加载...', // Placeholder description
-      };
+      course.value = await getCourseById(courseId);
     } catch (error) {
       console.error('Failed to fetch course data:', error);
       course.value.title = '无法加载课程';

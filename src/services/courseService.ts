@@ -1,5 +1,5 @@
 import api from './index';
-import type { Courses, CreateCourseRequest } from '@/types/api';
+import type { Courses, CreateCourseRequest, ApiResponse } from '@/types/api';
 
 /**
  * 获取当前教师的课程列表
@@ -15,6 +15,14 @@ export function getMyCourses(): Promise<Courses[]> {
  */
 export function createCourse(data: CreateCourseRequest): Promise<Courses> {
   return api.post('/courses', data);
+}
+
+/**
+ * 根据ID获取课程基本信息
+ * @param courseId 课程ID
+ */
+export function getCourseById(courseId: number): Promise<Courses> {
+  return api.get(`/courses/${courseId}`);
 }
 
 /**
