@@ -13,7 +13,7 @@
       </div>
       
       <main >
-        <router-view class="p-6" />
+        <router-view class="p-4" />
       </main>
     </div>
   </div>

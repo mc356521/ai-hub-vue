@@ -1,72 +1,50 @@
 <template>
-  <div>
-    <!-- Chapters/Main View -->
-    <div id="course-main-view" v-if="!activeLesson" class="space-y-4">
-      <details v-for="(chapter, index) in chapters" :key="chapter.id" class="chapter-accordion bg-white rounded-lg shadow-card group" :open="index === 0">
-        <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
-          <div class="flex items-center space-x-4">
-            <div class="text-energy-cyan font-bold text-lg w-8 text-center flex-shrink-0">{{ String(index + 1).padStart(2, '0') }}</div>
-            <div>
-              <h3 class="font-semibold text-lg text-graphite-black">{{ chapter.title }}</h3>
-              <p class="text-sm text-quantum-gray/70">{{ getChapterProgress(chapter) }}</p>
-            </div>
-          </div>
-          <div class="flex items-center space-x-4">
-            <div class="text-sm font-medium" :class="getChapterStatusClass(chapter)">
-              {{ getChapterStatusText(chapter) }}
-            </div>
-            <svg class="arrow-icon w-5 h-5 text-quantum-gray/60 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </summary>
-        <div class="px-4 pb-4 border-t border-gray-100">
-          <ul class="space-y-2 mt-3">
-            <li v-for="lesson in chapter.children" :key="lesson.id" class="flex items-center justify-between p-3 rounded-md transition-colors" :class="lesson.status === 'inprogress' ? 'bg-wisdom-blue/5 ring-1 ring-wisdom-blue' : 'hover:bg-gray-50'">
-              <div class="flex items-center">
-                <div v-html="getLessonStatusIcon(lesson.status)" class="mr-3 flex-shrink-0 w-5 h-5"></div>
-                <span class="font-medium" :class="{ 'text-quantum-gray/70': lesson.status === 'locked' }">{{ lesson.title }}</span>
-              </div>
-              <div class="flex items-center space-x-4">
-                <span v-if="lesson.duration" class="text-sm text-quantum-gray/70">{{ lesson.duration }}</span>
-                <button @click="viewLesson(lesson)" :disabled="lesson.status === 'locked'" :class="getLessonButtonClass(lesson)">
-                  {{ getLessonButtonText(lesson.status) }}
-                </button>
-              </div>
-            </li>
-          </ul>
+  <div class="lg:flex lg:space-x-8">
+    <!-- Main Content Area (Lesson Details or Chapter List on mobile) -->
+    <div class="flex-1 min-w-0">
+      <!-- Lesson Detail View -->
+      <div id="lesson-content-view" v-if="activeLesson">
+        <button @click="activeLesson = null" class="inline-flex items-center text-sm text-quantum-gray/80 hover:text-energy-cyan mb-4 transition-colors lg:hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          返回课程章节
+        </button>
+        <div class="bg-white p-6 md:p-8 rounded-lg shadow-card prose max-w-none" v-html="activeLesson.content">
         </div>
-      </details>
+        <!-- Lesson Navigation -->
+        <div class="mt-8 flex justify-between items-center">
+          <button @click="goToLesson(getPreviousLesson())" :disabled="!getPreviousLesson()" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-quantum-gray bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+            上一节
+          </button>
+          <button @click="goToLesson(getNextLesson())" :disabled="!getNextLesson()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-wisdom-blue hover:bg-wisdom-blue/90 disabled:opacity-50 disabled:cursor-not-allowed">
+            下一节
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Fallback to directory view if no lesson is active -->
+      <CourseDirectory v-else :chapters="chapters" @view-lesson="viewLesson" />
     </div>
 
-    <!-- Lesson Detail View -->
-    <div id="lesson-content-view" v-else>
-      <button @click="activeLesson = null" class="inline-flex items-center text-sm text-quantum-gray/80 hover:text-energy-cyan mb-4 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-        </svg>
-        返回课程章节
-      </button>
-      <div class="bg-white p-6 md:p-8 rounded-lg shadow-card prose max-w-none" v-html="activeLesson.content">
+    <!-- Right Sidebar for Desktop -->
+    <aside v-if="activeLesson" class="hidden lg:block w-80 flex-shrink-0">
+      <div class="sticky top-6">
+        <h3 class="text-lg font-semibold mb-4 text-graphite-black">课程目录</h3>
+        <div class="overflow-y-auto max-h-[calc(80vh-10rem)] pr-2">
+          <CourseDirectory :chapters="chapters" :active-lesson-id="activeLesson?.id" @view-lesson="viewLesson"/>
+        </div>
       </div>
-      <!-- Lesson Navigation -->
-      <div class="mt-8 flex justify-between items-center">
-        <button @click="goToLesson(getPreviousLesson())" :disabled="!getPreviousLesson()" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-quantum-gray bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-          上一节
-        </button>
-        <button @click="goToLesson(getNextLesson())" :disabled="!getNextLesson()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-wisdom-blue hover:bg-wisdom-blue/90 disabled:opacity-50 disabled:cursor-not-allowed">
-          下一节
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
-        </button>
-      </div>
-    </div>
+    </aside>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, defineAsyncComponent } from 'vue';
 import type { CourseProgressNode, LessonStatus } from '@/types/api';
+
+const CourseDirectory = defineAsyncComponent(() => import('./CourseDirectory.vue'));
 
 const props = defineProps<{
   chapters: CourseProgressNode[];
@@ -77,6 +55,7 @@ const activeLesson = ref<CourseProgressNode | null>(null);
 const flatLessons = computed(() => {
     const lessons: CourseProgressNode[] = [];
     const traverse = (nodes: CourseProgressNode[]) => {
+        if (!nodes) return;
         for (const node of nodes) {
             if (node.children && node.children.length > 0) {
                 traverse(node.children);
@@ -140,8 +119,6 @@ const getLessonButtonClass = (lesson: CourseProgressNode) => {
 
 const viewLesson = (lesson: CourseProgressNode) => {
   if (lesson.status !== 'locked') {
-    // In a real scenario, you would fetch lesson content here
-    // For now, we'll just show a placeholder
     activeLesson.value = { 
       ...lesson, 
       content: lesson.content || `<h1>${lesson.title}</h1><p>课程内容正在加载中...</p>` 

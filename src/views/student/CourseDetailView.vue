@@ -19,7 +19,7 @@
         />
 
         <!-- Main content area -->
-        <div class="mt-8">
+        <div class="mt-3">
           <div class="bg-white rounded-lg shadow-card">
             <!-- Tabs -->
             <CourseTabs :tabs="tabs" :active-tab="activeTab" @tab-change="activeTab = $event" />
@@ -96,39 +96,6 @@ onMounted(async () => {
   } finally {
     isLoading.value = false;
   }
-});
-
-
-// --- Mock Data ---
-// This will be replaced with data from the API
-const courseData = ref({
-  chapters: [
-    {
-      id: 'ch1',
-      title: 'JavaScript核心概念',
-      lessons: [
-        { id: 'l1-1', type: 'document', title: '作用域与作用域链', duration: '15分钟', status: 'completed', content: '<h1>作用域与作用域链</h1><p>详细内容...</p>' },
-        { id: 'l1-2', type: 'document', title: '闭包的原理与应用', duration: '20分钟', status: 'completed', content: '<h1>闭包</h1><p>闭包内容...</p>' },
-        { id: 'l1-3', type: 'document', title: '原型与原型链', duration: '10分钟', status: 'inprogress', content: '<h1>原型链</h1><p>原型链内容...</p>' },
-      ] as Lesson[]
-    },
-    {
-      id: 'ch2',
-      title: '异步编程与Promise',
-      lessons: [
-        { id: 'l2-1', type: 'video', title: '事件循环', duration: '20分钟', status: 'locked', content: '' },
-        { id: 'l2-2', type: 'document', title: 'Promise基础', duration: '25分钟', status: 'locked', content: '' },
-        { id: 'l2-3', type: 'document', title: 'async/await', duration: '10分钟', status: 'locked', content: '' },
-      ] as Lesson[]
-    },
-    {
-      id: 'ch3',
-      title: '模块化与工程化',
-      lessons: [
-        { id: 'l3-1', type: 'document', title: 'CommonJS vs ES Module', duration: '15分钟', status: 'locked', content: '' },
-      ] as Lesson[]
-    },
-  ] as Chapter[]
 });
 
 
