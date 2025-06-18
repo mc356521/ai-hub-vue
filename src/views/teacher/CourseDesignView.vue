@@ -39,7 +39,7 @@
       <div class="p-4 md:p-6 flex-grow">
         <!-- Here we will render the content based on the active tab -->
         <div v-if="activeTab === 'chapters'">
-          <CourseChapter v-if="course.id" :course-id="course.id" />
+          <CourseChapter v-if="course.id" :course-id="Number(course.id)" />
         </div>
         <div v-if="activeTab === 'tasks'">
           <p>学习任务内容...</p>
@@ -51,14 +51,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, shallowRef } from 'vue';
+import { ref, onMounted, shallowRef, defineAsyncComponent } from 'vue';
 import { useRoute } from 'vue-router';
-import CourseChapter from '../../components/course/CourseChapter.vue';
 import { getCourseById } from '@/services/courseService';
 import { getMyClasses } from '@/services/classService';
 import type { Courses, MyClassInfo } from '../../types/api';
 import { ListBulletIcon, CheckCircleIcon, ChatBubbleLeftRightIcon, PencilSquareIcon, ShieldCheckIcon, FolderIcon } from '@heroicons/vue/24/outline';
 
+const CourseChapter = defineAsyncComponent(() => import('@/components/course/teacher/CourseChapter.vue'));
 
 const route = useRoute();
 const course = ref<Partial<Courses>>({

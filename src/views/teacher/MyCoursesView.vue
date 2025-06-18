@@ -58,7 +58,7 @@
 import { ref, onMounted } from 'vue';
 import { getMyCourses, createCourse } from '../../services/courseService';
 import type { Courses } from '../../types/api';
-import CreateCourseModal from '../../components/course/CreateCourseModal.vue';
+import CreateCourseModal from '@/components/course/teacher/CreateCourseModal.vue';
 
 // 响应式状态：存储教师创建的课程列表
 const courses = ref<Courses[]>([]);

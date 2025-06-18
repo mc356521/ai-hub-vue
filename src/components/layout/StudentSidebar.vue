@@ -1,9 +1,20 @@
 <template>
-  <aside class="bg-quantum-gray text-mist-white w-60 h-full fixed z-10">
+  <aside 
+    ref="sidebarRef"
+    class="bg-quantum-gray text-mist-white w-60 h-full fixed z-30 transform transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0"
+    :class="{ 'translate-x-0': isMobileOpen }"
+  >
     <div class="p-4">
-      <div class="flex items-center mb-8">
-        <span class="text-energy-cyan text-2xl font-bold mr-2">AI</span>
-        <span class="text-white text-lg font-semibold">学习空间</span>
+      <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center">
+          <span class="text-energy-cyan text-2xl font-bold mr-2">AI</span>
+          <span class="text-white text-lg font-semibold">学习空间</span>
+        </div>
+        <button @click="$emit('close')" class="md:hidden p-1 text-white opacity-80 hover:opacity-100">
+           <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+           </svg>
+        </button>
       </div>
 
       <nav class="space-y-1">
@@ -82,9 +93,35 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
+
+const props = defineProps<{
+  isMobileOpen: boolean;
+}>();
+
+const emit = defineEmits(['close']);
+
+const sidebarRef = ref<HTMLElement | null>(null);
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (sidebarRef.value && !sidebarRef.value.contains(event.target as Node)) {
+    emit('close');
+  }
+};
+
+watch(
+  () => props.isMobileOpen,
+  (isOpen) => {
+    if (isOpen) {
+      // Use setTimeout to allow the current click event to finish before adding the listener
+      setTimeout(() => document.addEventListener('click', handleClickOutside), 0);
+    } else {
+      document.removeEventListener('click', handleClickOutside);
+    }
+  }
+);
 
 const router = useRouter();
 const userStore = useUserStore();
