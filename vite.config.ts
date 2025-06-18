@@ -12,11 +12,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // 代理所有 /api 开头的请求
-      '/api': {
+      // 使用正则表达式匹配所有API请求路径
+      '^/auth|/classes|/courses|/semesters|/users|/test': {
         target: 'http://localhost:8080', // 请确保这是您的后端服务地址
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // 无需重写路径，因为前端请求的路径和后端期望的路径一致
       },
     }
   }

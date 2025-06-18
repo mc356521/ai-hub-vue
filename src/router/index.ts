@@ -3,6 +3,7 @@ import { useUserStore } from '../store/user';
 
 // Layouts
 import TeacherLayout from '@/components/layout/TeacherLayout.vue';
+import StudentLayout from '@/components/layout/StudentLayout.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -41,6 +42,18 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, roles: ['teacher'] }
       },
       {
+        path: 'classes',
+        name: 'ClassManagement',
+        component: () => import('@/views/teacher/ClassManagementView.vue'),
+        meta: { requiresAuth: true, roles: ['teacher'] }
+      },
+      {
+        path: 'create-class',
+        name: 'CreateClass',
+        component: () => import('@/views/teacher/CreateClassView.vue'),
+        meta: { requiresAuth: true, roles: ['teacher'] }
+      },
+      {
         path: 'course-design/:id',
         name: 'CourseDesignDetail',
         component: () => import('@/views/teacher/CourseDesignView.vue'),
@@ -48,7 +61,24 @@ const routes: Array<RouteRecordRaw> = [
       }
     ],
   },
-  // Add other layouts and routes for student, admin here
+  // 学生相关路由
+  {
+    path: '/student',
+    component: StudentLayout,
+    meta: { requiresAuth: true, roles: ['student'] },
+    children: [
+      {
+        path: '',
+        redirect: '/student/my-courses',
+      },
+      {
+        path: 'my-courses',
+        name: 'StudentMyCourses',
+        component: () => import('@/views/student/MyCoursesView.vue'),
+      }
+    ],
+  },
+  // Add other layouts and routes for admin here
 ];
 
 const router = createRouter({
@@ -60,11 +90,11 @@ const router = createRouter({
 router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const userStore = useUserStore();
 
-  if (to.matched.some((record: RouteRecordRaw) => record.meta.requiresAuth)) {
+  if (to.matched.some((record) => record.meta?.requiresAuth)) {
     if (!userStore.isLoggedIn) {
       next({ name: 'Login' });
     } else {
-      const requiredRoles = to.meta.roles as string[];
+      const requiredRoles = to.meta?.roles as string[] | undefined;
       if (requiredRoles && userStore.role && !requiredRoles.includes(userStore.role)) {
         // Redirect to an unauthorized page or login
         // For now, redirecting to login

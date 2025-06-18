@@ -129,7 +129,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted, nextTick, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import { getCourseContent, updateCourseContent } from '@/services/courseService';
 import { 
   ArrowDownTrayIcon, PencilIcon, PlusIcon, ChevronDownIcon, 
@@ -149,8 +148,10 @@ interface NestedOutlineItem extends OutlineItem {
   children: OutlineItem[];
 }
 
-const route = useRoute();
-const courseId = ref<number | null>(null);
+const props = defineProps<{
+  courseId: number | null;
+}>();
+
 const markdownContent = ref('');
 const outline = ref<NestedOutlineItem[]>([]);
 const previewPanel = ref<HTMLElement | null>(null);
@@ -336,10 +337,10 @@ const handleCancel = () => {
 };
 
 const handleSave = async () => {
-  if (!courseId.value) return;
+  if (!props.courseId) return;
   isSaving.value = true;
   try {
-    await updateCourseContent(courseId.value, editableContent.value);
+    await updateCourseContent(props.courseId, editableContent.value);
     markdownContent.value = editableContent.value;
     isEditing.value = false;
     await nextTick();
@@ -402,31 +403,41 @@ watch(isEditing, (editing) => {
   }
 });
 
-onMounted(async () => {
-  const idFromRoute = 1; 
-  courseId.value = idFromRoute;
+watch(
+  () => props.courseId,
+  async (newCourseId) => {
+    if (newCourseId) {
+      try {
+        const content = await getCourseContent(newCourseId);
+        if (typeof content === 'string') {
+          markdownContent.value = content;
+        } else {
+          throw new Error('Received content is not a valid string.');
+        }
+        
+        parseOutline();
 
-  if (courseId.value) {
-    try {
-      const content = await getCourseContent(courseId.value);
-      markdownContent.value = content;
-      parseOutline();
+        await nextTick();
+        
+        const flatOutline = outline.value.flatMap(item => [item, ...item.children]);
+        anchorElements = flatOutline
+          .map(item => document.getElementById(item.id))
+          .filter((el): el is HTMLElement => el !== null);
+        
+        previewPanel.value?.addEventListener('scroll', handleScroll);
 
-      await nextTick();
-      
-      const flatOutline = outline.value.flatMap(item => [item, ...item.children]);
-      anchorElements = flatOutline
-        .map(item => document.getElementById(item.id))
-        .filter((el): el is HTMLElement => el !== null);
-      
-      previewPanel.value?.addEventListener('scroll', handleScroll);
-
-    } catch (error) {
-      console.error('Failed to fetch course content:', error);
-      markdownContent.value = '# 加载失败\n\n无法获取课程内容，请检查网络连接或联系管理员。';
-      parseOutline();
+      } catch (error) {
+        console.error('Failed to fetch course content:', error);
+        markdownContent.value = '# 加载失败\n\n无法获取课程内容，请检查网络连接或联系管理员。';
+        parseOutline();
+      }
     }
-  }
+  },
+  { immediate: true }
+);
+
+onMounted(async () => {
+  // Content loading is now handled by the watcher on `props.courseId`
 });
 
 onUnmounted(() => {

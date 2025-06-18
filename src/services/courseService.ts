@@ -1,42 +1,38 @@
-import apiClient from './index';
-import type { Courses, CreateCourseRequest } from '../types/api';
+import api from './index';
+import type { Courses, CreateCourseRequest } from '@/types/api';
 
 /**
- * 获取当前教师的所有课程
- * @returns 课程列表
+ * 获取当前教师的课程列表
  */
-export const getMyCourses = (): Promise<Courses[]> => {
-  return apiClient.get('/api/courses/my');
+export function getMyCourses(): Promise<Courses[]> {
+  return api.get('/courses/my');
+}
+
+/**
+ * 创建新课程
+ * @param data - 创建课程所需的数据
+ * @returns Promise<Courses>
+ */
+export function createCourse(data: CreateCourseRequest): Promise<Courses> {
+  return api.post('/courses', data);
+}
+
+/**
+ * 获取课程内容
+ * @param courseId 课程ID
+ * @returns 课程的Markdown内容
+ */
+export const getCourseContent = async (courseId: number): Promise<string> => {
+  const content = await api.get(`/courses/${courseId}/content`);
+  return content as unknown as string;
 };
 
 /**
- * 创建一个新课程
- * @param courseData - 新课程的数据
- * @returns 创建成功后的课程对象
+ * 更新课程内容
+ * @param courseId 课程ID
+ * @param content 课程的Markdown内容
  */
-export const createCourse = (courseData: CreateCourseRequest): Promise<Courses> => {
-    return apiClient.post('/api/courses', courseData);
-};
-
-/**
- * 获取指定课程的Markdown原文
- * @param courseId - 课程ID
- * @returns 课程内容的字符串
- */
-export const getCourseContent = (courseId: number): Promise<string> => {
-  return apiClient.get(`/api/courses/${courseId}/content`);
-};
-
-/**
- * 更新指定课程的Markdown原文
- * @param courseId - 课程ID
- * @param content - 新的Markdown内容
- * @returns 更新结果
- */
-export const updateCourseContent = (courseId: number, content: string): Promise<any> => {
-  return apiClient.put(`/api/courses/${courseId}/content`, content, {
-    headers: {
-      'Content-Type': 'text/plain'
-    }
-  });
+export const updateCourseContent = async (courseId: number, content: string): Promise<void> => {
+  console.log(`Updating course ${courseId} with content:`, content);
+  await api.put(`/courses/${courseId}/content`, { content });
 }; 

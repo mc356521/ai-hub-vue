@@ -37,7 +37,7 @@
       <div class="p-4 md:p-6 flex-grow">
         <!-- Here we will render the content based on the active tab -->
         <div v-if="activeTab === 'chapters'">
-          <CourseChapter />
+          <CourseChapter :course-id="course.id" />
         </div>
         <div v-if="activeTab === 'tasks'">
           <p>学习任务内容...</p>
@@ -81,11 +81,11 @@ onMounted(async () => {
       // const response = await getCourseById(courseId);
       // course.value = response;
 
-      // Using mock data for now
+      // Using mock data for now - but with the real ID
       course.value = {
         id: courseId,
-        title: 'JavaScript高级编程',
-        description: '前端开发核心技能',
+        title: `课程 ID: ${courseId}`, // Placeholder title
+        description: '课程内容正在加载...', // Placeholder description
       };
     } catch (error) {
       console.error('Failed to fetch course data:', error);

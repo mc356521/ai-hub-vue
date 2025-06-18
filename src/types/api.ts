@@ -51,4 +51,45 @@ export interface Courses {
 export interface CreateCourseRequest {
   title: string;
   description?: string;
+}
+
+export interface ClassesEntity {
+  id: number;
+  name: string;
+  teacherId?: number;
+  courseId?: number;
+  semesterId?: number;
+  classCode?: string;
+  status: 'pending' | 'active' | 'finished' | 'archived';
+  createTime: string;
+  updateTime?: string;
+  deleted?: boolean;
+}
+
+export interface UserInfo {
+    id: number;
+    username: string;
+    email?: string;
+}
+
+export interface CourseInfo {
+  id: number;
+  title: string;
+  description: string;
+}
+
+export interface Semester {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: 'current' | 'past' | 'future';
+}
+
+export interface ClassesRequest {
+  id?: number;
+  name: string;
+  courseId?: number;
+  semesterId: string;
+  status: 'pending' | 'active' | 'finished' | 'archived';
 } 

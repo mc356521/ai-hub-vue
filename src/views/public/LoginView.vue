@@ -130,9 +130,11 @@ const handleLogin = async () => {
     // 根据角色跳转到不同仪表盘
     if (activeTab.value === 'teacher') {
       router.push('/'); // TeacherLayout 默认路由
+    } else if (activeTab.value === 'student') {
+      router.push('/student/my-courses'); // 学生"我的课程"页面
     } else {
-      // 假设学生和管理员有其他路由
-      router.push('/'); // 暂时都跳到教师仪表盘
+      // 管理员有其他路由
+      router.push('/'); // 暂时跳到教师仪表盘
     }
 
   } catch (error: any) {
