@@ -18,7 +18,7 @@
       <div class="border-b border-gray-200">
         <div class="flex flex-col md:flex-row justify-between md:items-center px-4 gap-4">
           <nav class="flex space-x-2 overflow-x-auto pb-2 -mb-2" aria-label="Tabs">
-            <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" :class="[activeTab === tab.id ? 'text-energy-cyan border-energy-cyan' : 'text-graphite-black border-transparent hover:text-quantum-gray hover:border-gray-200', 'flex items-center whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm transition-colors']">
+            <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" :class="[activeTab === tab.id ? 'text-energy-cyan border-energy-cyan' : 'text-graphite-black  border-transparent hover:text-quantum-gray/80 hover:border-gray-200', 'flex items-center whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm transition-colors']">
               <component :is="tab.icon" class="h-5 w-5 mr-2" />
               {{ tab.name }}
             </button>

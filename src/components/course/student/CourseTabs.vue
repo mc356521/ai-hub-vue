@@ -9,7 +9,7 @@
           'flex items-center whitespace-nowrap py-3 px-2 md:px-4 border-b-2 font-medium text-sm',
           activeTab === tab.key
             ? 'text-energy-cyan border-energy-cyan'
-            : 'border-transparent hover:border-gray-300'
+            : 'border-transparent hover:text-quantum-gray/80 hover:border-gray-300'
         ]"
         :title="tab.label"
       >

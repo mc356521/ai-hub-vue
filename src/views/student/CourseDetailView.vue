@@ -52,8 +52,8 @@
 import { ref, computed, h, defineAsyncComponent, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import type { Component } from 'vue';
-import type { Chapter, Lesson, Courses } from '@/types/api';
-import { getCourseById } from '@/services/courseService';
+import type { Chapter, Lesson, Courses, CourseProgressNode } from '@/types/api';
+import { getCourseById, getCourseProgress } from '@/services/courseService';
 
 // --- Components ---
 const CourseDetailHeader = defineAsyncComponent(() => import('@/components/course/student/CourseDetailHeader.vue'));
@@ -68,6 +68,7 @@ const CourseMaterials = defineAsyncComponent(() => import('@/components/course/s
 // --- State ---
 const route = useRoute();
 const course = ref<Partial<Courses>>({});
+const courseProgress = ref<CourseProgressNode[]>([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref('chapters');
@@ -83,8 +84,12 @@ onMounted(async () => {
   }
   try {
     isLoading.value = true;
-    const response = await getCourseById(courseId);
-    course.value = response; // Direct assignment as per spec
+    const [courseDetails, progressData] = await Promise.all([
+      getCourseById(courseId),
+      getCourseProgress(courseId)
+    ]);
+    course.value = courseDetails;
+    courseProgress.value = progressData;
   } catch (e: any) {
     console.error("Failed to fetch course details:", e);
     error.value = e.message || '无法加载课程数据。';
@@ -159,7 +164,14 @@ const activeComponent = computed(() => {
     exams: OnlineExams,
     materials: CourseMaterials,
   };
-  return map[activeTab.value as keyof typeof map];
+  const component = map[activeTab.value as keyof typeof map];
+  
+  if (activeTab.value === 'chapters') {
+    return h(component, { chapters: courseProgress.value });
+  }
+  
+  // For other tabs, you might pass the main course data
+  return h(component, { course: course.value });
 });
 
 </script> 

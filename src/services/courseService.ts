@@ -1,5 +1,12 @@
 import api from './index';
-import type { Courses, CreateCourseRequest, ApiResponse, StudentCourse } from '@/types/api';
+import type { 
+  Courses, 
+  CourseProgressNode, 
+  CreateCourseRequest, 
+  StudentCourse
+} from '@/types/api';
+
+// --- General Course Services ---
 
 /**
  * 获取当前教师的课程列表
@@ -9,20 +16,11 @@ export function getMyCourses(): Promise<Courses[]> {
 }
 
 /**
- * 创建新课程
- * @param data - 创建课程所需的数据
- * @returns Promise<Courses>
- */
-export function createCourse(data: CreateCourseRequest): Promise<Courses> {
-  return api.post('/courses', data);
-}
-
-/**
  * 根据ID获取课程基本信息
  * @param courseId 课程ID
  */
-export function getCourseById(courseId: number): Promise<Courses> {
-  return api.get(`/courses/${courseId}`);
+export function getCourseById(id: number): Promise<Courses> {
+  return api.get(`/courses/${id}`);
 }
 
 /**
@@ -47,6 +45,36 @@ export const updateCourseContent = async (courseId: number, content: string): Pr
     }
   });
 };
+
+export function getCourseProgress(id: number): Promise<CourseProgressNode[]> {
+  return api.get(`/courses/${id}/progress`);
+}
+
+export function getCourseOutline(courseId: number): Promise<any> {
+  return api.get(`/courses/${courseId}/outline`);
+}
+
+export function updateCourseOutline(courseId: number, content: string): Promise<void> {
+  return api.put(`/courses/${courseId}/outline`, content, {
+    headers: { 'Content-Type': 'text/plain' }
+  });
+}
+
+export function getAllCourses(): Promise<Courses[]> {
+  return api.get('/courses');
+}
+
+// --- Teacher-Specific Services ---
+
+export function getMyTeacherCourses(): Promise<any[]> {
+  return api.get('/courses/my-teacher');
+}
+
+export function createCourse(data: CreateCourseRequest): Promise<Courses> {
+  return api.post('/courses', data);
+}
+
+// --- Student-Specific Services ---
 
 /**
  * 获取当前学生的课程列表

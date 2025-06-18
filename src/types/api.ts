@@ -45,6 +45,9 @@ export interface Courses {
   parseError: string;
   parsedAt: string;
   chapterCount: number;
+  coverImage: string;
+  teacherName: string;
+  category: string;
 }
 
 // 创建课程请求体
@@ -143,15 +146,15 @@ export interface CourseCardData {
 
 // --- Course Detail Page Types ---
 
-export type LessonStatus = 'completed' | 'inprogress' | 'locked' | 'new';
+export type LessonStatus = 'completed' | 'inprogress' | 'locked' | 'not_started';
 
 export interface Lesson {
   id: string;
-  title: string;
-  type: 'document' | 'video';
+  type: 'video' | 'document' | 'quiz';
+  title:string;
   duration: string;
   status: LessonStatus;
-  content: string;
+  content: string; // HTML content for the lesson
 }
 
 export interface Chapter {
@@ -164,4 +167,18 @@ export interface CourseDetails {
   title: string;
   subtitle: string;
   chapters: Chapter[];
+}
+
+export interface CourseProgressNode {
+  id: number;
+  chapterKey: string;
+  title: string;
+  level: number;
+  sortOrder: number;
+  children: CourseProgressNode[] | null;
+  status: LessonStatus;
+  // The following fields are not from the API but can be added for UI logic
+  duration?: string; 
+  type?: 'video' | 'document' | 'quiz';
+  content?: string;
 } 
