@@ -21,50 +21,17 @@
     <!-- 大纲树形结构 -->
     <div class="md:flex-1 md:relative">
       <ul ref="outlinePanel" class="space-y-2 pr-2 md:absolute md:inset-0 md:overflow-y-auto">
-        <!-- 遍历一级标题 (章) -->
-        <li v-for="item in outline" :key="item.id" class="text-sm">
-          <div class="flex justify-between items-center group">
-            <!-- 章节标题链接 -->
-            <a :href="'#' + item.id"
-               @click.prevent="$emit('scrollToAnchor', item.id)"
-               :class="[
-                 'block transition-colors duration-200 cursor-pointer flex-grow',
-                 item.id === activeAnchorId && item.children.length === 0 ? 'text-energy-cyan font-bold' : 
-                 (item.level === 1 && (activeAnchorId || '').startsWith(item.id)) ? 'text-wisdom-blue font-semibold' :
-                 'text-quantum-gray hover:text-wisdom-blue'
-               ]">
-              {{ item.content }}
-            </a>
-            <!-- 子章节展开/折叠按钮 -->
-            <button 
-              v-if="item.children.length > 0" 
-              @click="$emit('toggleChapter', item.id)"
-              class="p-1 -mr-1 group-hover:text-wisdom-blue"
-              :class="expandedChapters.has(item.id) ? 'text-wisdom-blue' : 'text-gray-400'"
-              >
-              <ChevronDownIcon 
-                class="h-4 w-4 transition-transform duration-200"
-                :class="{ 'rotate-180': !expandedChapters.has(item.id) }"
-              />
-            </button>
-          </div>
-          <!-- 遍历二级标题 (节) -->
-          <ul 
-            :class="{ 'hidden': !expandedChapters.has(item.id) }"
-            class="space-y-1 mt-1 pl-3"
-            >
-            <li v-for="child in item.children" :key="child.id">
-              <a :href="'#' + child.id"
-                 @click.prevent="$emit('scrollToAnchor', child.id)"
-                 :class="[
-                   'block transition-colors duration-200 cursor-pointer',
-                    activeAnchorId === child.id ? 'text-energy-cyan font-bold' : 'text-quantum-gray hover:text-wisdom-blue'
-                 ]">
-                {{ child.content }}
-              </a>
-            </li>
-          </ul>
-        </li>
+        <!-- 使用递归组件递归渲染嵌套大纲 -->
+        <outline-item
+          v-for="item in outline"
+          :key="item.id"
+          :item="item"
+          :active-anchor-id="activeAnchorId"
+          :expanded-chapters="expandedChapters"
+          @scroll-to-anchor="$emit('scrollToAnchor', $event)"
+          @toggle-chapter="$emit('toggleChapter', $event)"
+        />
+        
         <!-- 当没有大纲时的提示信息 -->
         <li v-if="!outline.length" class="text-sm text-gray-400">
           暂无大纲
@@ -81,6 +48,7 @@ import {
   ArrowsPointingOutIcon, ArrowsPointingInIcon 
 } from '@heroicons/vue/24/outline';
 import type { NestedOutlineItem } from '@/composables';
+import OutlineItem from './OutlineItem.vue';
 
 // --- 组件 props 定义 ---
 const props = defineProps<{
@@ -98,9 +66,24 @@ const outlinePanel = ref(null); // 对大纲面板 DOM 元素的引用
 // --- 计算属性 ---
 // 判断是否所有章节都已展开
 const areAllExpanded = computed(() => {
-  const expandableCount = outline.value.filter(c => c.children.length > 0).length;
-  if (expandableCount === 0) return true; // 如果没有可展开的章节，则视为全部展开
-  return expandedChapters.value.size === expandableCount;
+  // 计算所有可展开章节的数量
+  const allExpandableChapters: string[] = [];
+  
+  const countExpandable = (items: NestedOutlineItem[]) => {
+    items.forEach(item => {
+      if (item.children.length > 0) {
+        allExpandableChapters.push(item.id);
+        countExpandable(item.children);
+      }
+    });
+  };
+  
+  countExpandable(outline.value);
+  
+  if (allExpandableChapters.length === 0) return true;
+  
+  // 检查所有可展开的章节是否都已展开
+  return allExpandableChapters.every(id => expandedChapters.value.has(id));
 });
 
 // --- Expose ---

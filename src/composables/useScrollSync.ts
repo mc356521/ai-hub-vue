@@ -8,13 +8,15 @@ import { NestedOutlineItem } from './useMarkdownProcessor';
  * @param previewPanel - 预览面板的 DOM 元素 ref。
  * @param editorPanel - 编辑器面板的 DOM 元素 ref。
  * @param outlinePanel - 大纲面板的 DOM 元素 ref。
+ * @param options - 可选参数，包含`useWindowScroll`布尔值。
  */
 export function useScrollSync(
-  outline: Ref<NestedOutlineItem[]>,
+  outline: Ref<Readonly<NestedOutlineItem[]>>,
   isEditing: Ref<boolean>,
   previewPanel: Ref<HTMLElement | null>,
   editorPanel: Ref<HTMLTextAreaElement | null>,
-  outlinePanel: Ref<HTMLElement | null>
+  outlinePanel: Ref<HTMLElement | null>,
+  options: { useWindowScroll?: boolean } = {}
 ) {
   const activeAnchorId = ref<string | null>(null); // 当前激活的锚点 ID
   let anchorElements: HTMLElement[] = []; // 预览区中所有锚点元素的集合
@@ -23,10 +25,28 @@ export function useScrollSync(
 
   // 更新预览区中的锚点元素列表
   const updateAnchorElements = () => {
-    const flatOutline = outline.value.flatMap(item => [item, ...item.children]);
-    anchorElements = flatOutline
-      .map(item => document.getElementById(item.id))
-      .filter((el): el is HTMLElement => el !== null);
+    // 获取所有带有ID的标题元素，并按照它们在文档中的位置排序
+    const container = options.useWindowScroll ? document : previewPanel.value;
+    if (!container) return;
+    
+    // 使用querySelectorAll选择所有h1-h6标题，不仅仅是那些在大纲中的
+    // 这确保了即使某些标题没有被添加到大纲中，我们仍然可以捕获它们
+    const headings = Array.from(container.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]'))
+      .filter((el): el is HTMLElement => el instanceof HTMLElement);
+    
+    // 按照它们在文档中的位置排序
+    anchorElements = headings.sort((a, b) => {
+      const posA = a.getBoundingClientRect().top;
+      const posB = b.getBoundingClientRect().top;
+      return posA - posB;
+    });
+    
+    // 调试日志，帮助识别问题
+    console.log('Found anchor elements:', anchorElements.map(el => ({ 
+      id: el.id, 
+      tag: el.tagName,
+      text: el.textContent?.trim().substring(0, 20) 
+    })));
   };
 
   // 处理预览面板的滚动事件
@@ -137,17 +157,14 @@ export function useScrollSync(
             const container = outlinePanel.value!;
             const containerRect = container.getBoundingClientRect();
             const elementRect = linkElement.getBoundingClientRect();
-            const buffer = 4 * linkElement.clientHeight; // 缓冲区，避免频繁滚动
-            const isVisible = elementRect.top >= containerRect.top && elementRect.bottom <= containerRect.bottom;
+            
+            // Check if element is within the visible viewport of the container
+            const isVisible = 
+              elementRect.top >= containerRect.top && 
+              elementRect.bottom <= containerRect.bottom;
             
             if (!isVisible) {
                 linkElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else {
-                const isInTopBuffer = elementRect.top < containerRect.top + buffer;
-                const isInBottomBuffer = elementRect.bottom > containerRect.bottom - buffer;
-                if (isInTopBuffer || isInBottomBuffer) {
-                    linkElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
             }
         }
     });
@@ -155,14 +172,100 @@ export function useScrollSync(
 
   // 设置预览区的滚动监听器
   const setupPreviewScroll = () => {
-    previewPanel.value?.addEventListener('scroll', handlePreviewScroll);
-  }
+    const scrollContainer = options.useWindowScroll ? window : previewPanel.value;
+    if (!scrollContainer) return;
 
-  // 在组件卸载时清理事件监听器
-  onUnmounted(() => {
-    previewPanel.value?.removeEventListener('scroll', handlePreviewScroll);
-    editorPanel.value?.removeEventListener('scroll', handleEditorScroll);
-  });
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+
+    onUnmounted(() => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+    });
+  };
+
+  const handleScroll = () => {
+    if (isEditing.value || !anchorElements || anchorElements.length === 0) return;
+
+    if (options.useWindowScroll) {
+      // --- Logic for WINDOW SCROLL (Student View) ---
+
+      // Edge case: If scrolled to the absolute bottom of the page.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 5) {
+        const lastElementId = anchorElements[anchorElements.length - 1].id;
+        if (activeAnchorId.value !== lastElementId) {
+          activeAnchorId.value = lastElementId;
+        }
+        return;
+      }
+
+      // 使用更精确的激活线，位于视窗的上部
+      const activeLine = window.innerHeight * 0.2; // 视窗高度的20%处
+      
+      // 查找第一个位于激活线下方的元素
+      let activeElement = null;
+      for (let i = 0; i < anchorElements.length; i++) {
+        const el = anchorElements[i];
+        const rect = el.getBoundingClientRect();
+        
+        // 如果元素顶部位于激活线下方，则它是第一个可能的候选
+        if (rect.top > activeLine) {
+          // 我们找到了第一个在激活线下方的元素
+          // 所以前一个元素应该是当前活跃的（如果存在的话）
+          activeElement = i > 0 ? anchorElements[i - 1] : null;
+          break;
+        }
+      }
+      
+      // 如果没有找到任何在激活线下方的元素，则最后一个元素是活跃的
+      if (!activeElement && anchorElements.length > 0) {
+        activeElement = anchorElements[anchorElements.length - 1];
+      }
+      
+      const newActiveId = activeElement ? activeElement.id : null;
+      if (activeAnchorId.value !== newActiveId) {
+        activeAnchorId.value = newActiveId;
+        console.log('Active anchor changed to:', newActiveId);
+      }
+    } else {
+      // --- Logic for PANEL SCROLL (Teacher View) ---
+      // 使用相同的改进逻辑，但针对面板滚动
+      const container = previewPanel.value;
+      if (!container) return;
+
+      // Edge case: scrolled to the bottom of the container.
+      if (container.scrollTop + container.clientHeight >= container.scrollHeight - 5) {
+        const lastElementId = anchorElements[anchorElements.length - 1].id;
+        if (activeAnchorId.value !== lastElementId) {
+          activeAnchorId.value = lastElementId;
+        }
+        return;
+      }
+
+      // 使用更精确的激活线，位于容器的上部
+      const containerTop = container.getBoundingClientRect().top;
+      const activeLine = containerTop + container.clientHeight * 0.2;
+      
+      // 查找第一个位于激活线下方的元素
+      let activeElement = null;
+      for (let i = 0; i < anchorElements.length; i++) {
+        const el = anchorElements[i];
+        const rect = el.getBoundingClientRect();
+        
+        if (rect.top > activeLine) {
+          activeElement = i > 0 ? anchorElements[i - 1] : null;
+          break;
+        }
+      }
+      
+      if (!activeElement && anchorElements.length > 0) {
+        activeElement = anchorElements[anchorElements.length - 1];
+      }
+      
+      const newActiveId = activeElement ? activeElement.id : null;
+      if (activeAnchorId.value !== newActiveId) {
+        activeAnchorId.value = newActiveId;
+      }
+    }
+  };
 
   return {
     activeAnchorId,

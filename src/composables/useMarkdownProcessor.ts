@@ -25,7 +25,7 @@ export interface OutlineItem {
 
 // 包含子项的嵌套大纲条目接口定义
 export interface NestedOutlineItem extends OutlineItem {
-  children: OutlineItem[]; // 子标题列表
+  children: NestedOutlineItem[]; // 子标题列表（修改为NestedOutlineItem以支持多级嵌套）
 }
 
 /**
@@ -41,8 +41,10 @@ export function useMarkdownProcessor(markdownContent: Ref<string>) {
   const parseOutline = () => {
     const tokens = md.parse(markdownContent.value, {});
     const result: NestedOutlineItem[] = [];
-    let currentH1: NestedOutlineItem | null = null; // 用于跟踪当前的一级标题
-
+    
+    // 记录当前处理的各级标题节点
+    const currentHeadings: { [key: number]: NestedOutlineItem } = {};
+    
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
       if (token.type === 'heading_open') {
@@ -55,14 +57,45 @@ export function useMarkdownProcessor(markdownContent: Ref<string>) {
 
         if (!id) continue;
 
-        const newItem: OutlineItem = { level, content, id, lineNumber };
+        const newItem: NestedOutlineItem = { 
+          level, 
+          content, 
+          id, 
+          lineNumber,
+          children: [] 
+        };
+
+        // 处理不同级别标题的逻辑
         if (level === 1) {
-          const nestedItem: NestedOutlineItem = { ...newItem, children: [] };
-          result.push(nestedItem);
-          currentH1 = nestedItem;
-        } else if (currentH1 && level > 1) {
-          // 将 h2-h6 添加为当前 h1 的子项
-          currentH1.children.push(newItem);
+          // h1 是顶级标题，直接添加到结果数组中
+          result.push(newItem);
+          currentHeadings[1] = newItem;
+          // 清除更深层级的引用
+          for (let l = 2; l <= 6; l++) {
+            delete currentHeadings[l];
+          }
+        } else {
+          // 对于非 h1 标题，找到它的父级标题
+          let parentLevel = level - 1;
+          while (parentLevel >= 1 && !currentHeadings[parentLevel]) {
+            parentLevel--;
+          }
+
+          if (parentLevel >= 1 && currentHeadings[parentLevel]) {
+            // 将当前标题添加到其父级标题的 children 数组中
+            currentHeadings[parentLevel].children.push(newItem);
+            // 更新当前级别的标题引用
+            currentHeadings[level] = newItem;
+            // 清除更深层级的引用
+            for (let l = level + 1; l <= 6; l++) {
+              delete currentHeadings[l];
+            }
+          } else {
+            // 如果没有找到父级标题，则作为顶级项添加
+            // 之前的代码只处理了h2的特殊情况，现在处理所有级别
+            result.push(newItem);
+            currentHeadings[level] = newItem;
+          }
         }
         
         // 跳过 inline 和 heading_close 标记

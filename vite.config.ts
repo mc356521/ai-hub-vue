@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'vue': 'vue/dist/vue.esm-bundler.js', // 添加Vue别名，启用运行时编译
     },
   },
   server: {

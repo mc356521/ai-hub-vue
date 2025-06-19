@@ -45,6 +45,7 @@ import {
 import CourseOutline from './CourseOutline.vue';
 import CourseContent from './CourseContent.vue';
 import CourseAIAssistant from './CourseAIAssistant.vue';
+import type { NestedOutlineItem } from '@/composables';
 
 // --- 组件 props 定义 ---
 const props = defineProps<{
@@ -58,8 +59,8 @@ const isEditing = ref(false); // 是否处于编辑模式
 const expandedChapters = ref<Set<string>>(new Set()); // 存储已展开的章节ID
 
 // --- 子组件引用 ---
-const outlineComponent = ref<InstanceType<typeof CourseOutline> | null>(null);
-const contentComponent = ref<InstanceType<typeof CourseContent> | null>(null);
+const outlineComponent = ref<{ outlinePanel: HTMLElement | null } | null>(null);
+const contentComponent = ref<{ previewPanel: HTMLElement | null; editorPanel: HTMLTextAreaElement | null } | null>(null);
 
 // --- COMPOSABLES ---
 
@@ -70,12 +71,18 @@ const onContentLoaded = async () => {
   updateAnchorElements(); // 更新滚动同步所需的锚点元素
   setupPreviewScroll(); // 设置预览区的滚动监听
 
-  // 默认展开所有包含子章节的章节
-  outline.value.forEach(chapter => {
-    if (chapter.children.length > 0) {
-      expandedChapters.value.add(chapter.id);
-    }
-  });
+  // 递归展开所有层级的章节
+  const expandAllNodes = (items: NestedOutlineItem[]) => {
+    items.forEach(item => {
+      if (item.children && item.children.length > 0) {
+        expandedChapters.value.add(item.id); // 添加当前节点到已展开集合
+        expandAllNodes(item.children); // 递归展开子节点
+      }
+    });
+  };
+  
+  // 展开所有章节
+  expandAllNodes(outline.value);
 };
 
 // 课程内容管理 Composable
@@ -127,31 +134,77 @@ const toggleChapter = (id: string) => {
 };
 
 const areAllExpanded = computed(() => {
-  const expandableCount = outline.value.filter(c => c.children.length > 0).length;
-  if (expandableCount === 0) return true;
-  return expandedChapters.value.size === expandableCount;
+  // 计算所有可展开章节的数量
+  const allExpandableChapters: string[] = [];
+  
+  const countExpandable = (items: NestedOutlineItem[]) => {
+    items.forEach(item => {
+      if (item.children.length > 0) {
+        allExpandableChapters.push(item.id);
+        countExpandable(item.children);
+      }
+    });
+  };
+  
+  countExpandable(outline.value);
+  
+  if (allExpandableChapters.length === 0) return true;
+  
+  // 检查所有可展开的章节是否都已展开
+  return allExpandableChapters.every(id => expandedChapters.value.has(id));
 });
 
 const toggleAllChapters = () => {
   if (areAllExpanded.value) {
     expandedChapters.value.clear();
   } else {
-    outline.value.forEach(chapter => {
-      if (chapter.children.length > 0) {
-        expandedChapters.value.add(chapter.id);
-      }
-    });
+    const addAllExpanded = (items: NestedOutlineItem[]) => {
+      items.forEach(item => {
+        if (item.children.length > 0) {
+          expandedChapters.value.add(item.id);
+          addAllExpanded(item.children);
+        }
+      });
+    };
+    
+    addAllExpanded(outline.value);
   }
 };
 
 // --- 侦听器 ---
 
-// 当滚动导致 activeAnchorId 变化时，自动展开对应章节
+/**
+ * 递归查找从根节点到目标ID节点的路径。
+ * @param nodes - 当前要搜索的节点数组
+ * @param id - 目标节点ID
+ * @returns - 包含路径上所有节点ID的数组，如果未找到则返回null
+ */
+const findPathToNode = (nodes: NestedOutlineItem[], id: string): string[] | null => {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return [node.id];
+    }
+    if (node.children && node.children.length > 0) {
+      const path = findPathToNode(node.children, id);
+      if (path) {
+        // 如果在子节点中找到了路径，则将当前节点ID前置并返回
+        return [node.id, ...path];
+      }
+    }
+  }
+  return null;
+};
+
+// 当滚动导致 activeAnchorId 变化时，自动展开对应章节及其所有父章节
 watch(activeAnchorId, (newId) => {
   if (!newId) return;
-  const newParentChapter = outline.value.find(c => c.children.some(child => child.id === newId) || c.id === newId);
-  if (newParentChapter) {
-    expandedChapters.value.add(newParentChapter.id);
+
+  const path = findPathToNode(outline.value, newId);
+  if (path) {
+    // 将路径中的所有节点ID都添加到展开集合中，以确保其可见性
+    path.forEach(nodeId => {
+      expandedChapters.value.add(nodeId);
+    });
   }
 });
 </script>

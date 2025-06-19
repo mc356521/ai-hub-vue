@@ -27,7 +27,7 @@
             <!-- Dynamic content based on tab -->
             <div class="p-6">
               <keep-alive>
-                <component :is="activeComponent" :course="courseData" />
+                <component :is="activeComponent" v-bind="courseDataForChild" />
               </keep-alive>
             </div>
           </div>
@@ -52,7 +52,7 @@
 import { ref, computed, h, defineAsyncComponent, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import type { Component } from 'vue';
-import type { Chapter, Lesson, Courses, CourseProgressNode } from '@/types/api';
+import type { Courses, CourseProgressNode } from '@/types/api';
 import { getCourseById, getCourseProgress } from '@/services/courseService';
 
 // --- Components ---
@@ -103,7 +103,7 @@ onMounted(async () => {
 const createIcon = (path: string) => h('svg', { xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': 2 }, [h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', d: path })]);
 
 const icons = {
-  chapters: createIcon('M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 4h5m-5 4h5'),
+  chapters: createIcon('M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h5m-5 4h5'),
   tasks: createIcon('M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'),
   discussion: createIcon('M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'),
   assignments: createIcon('M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'),
@@ -123,7 +123,7 @@ const tabs: { key: string; label: string; icon: Component; }[] = [
 
 // --- Computed ---
 const activeComponent = computed(() => {
-  const map = {
+  const map: Record<string, Component> = {
     chapters: CourseChapters,
     tasks: LearningTasks,
     discussion: DiscussionForum,
@@ -131,14 +131,14 @@ const activeComponent = computed(() => {
     exams: OnlineExams,
     materials: CourseMaterials,
   };
-  const component = map[activeTab.value as keyof typeof map];
-  
+  return map[activeTab.value];
+});
+
+const courseDataForChild = computed(() => {
   if (activeTab.value === 'chapters') {
-    return h(component, { chapters: courseProgress.value });
+    return null;
   }
-  
-  // For other tabs, you might pass the main course data
-  return h(component, { course: course.value });
+  return { course: course.value };
 });
 
 </script> 

@@ -81,4 +81,14 @@ export function createCourse(data: CreateCourseRequest): Promise<Courses> {
  */
 export function getMyStudentCourses(): Promise<StudentCourse[]> {
   return api.get('/courses/my-student');
-} 
+}
+
+/*
+ * 获取章节详情内容
+ * @param courseId 课程ID
+ * @param chapterKey 章节Key
+ * @returns 章节详情数据
+ */
+// export function getChapterDetail(courseId: number, chapterKey: string): Promise<{ chapter: CourseProgressNode }> {
+//  return api.get(`/courses/${courseId}/chapters/${chapterKey}`);
+// } 
