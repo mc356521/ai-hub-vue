@@ -59,4 +59,20 @@ apiClient.interceptors.response.use(
   }
 );
 
-export default apiClient; 
+// 导出 API 客户端
+export default apiClient;
+
+// 导出各个服务
+import * as authService from './authService';
+import * as courseService from './courseService';
+import * as classService from './classService';
+import * as semesterService from './semesterService';
+import * as learningProgressService from './learningProgressService';
+
+export {
+  authService,
+  courseService,
+  classService,
+  semesterService,
+  learningProgressService
+}; 

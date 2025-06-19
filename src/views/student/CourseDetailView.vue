@@ -53,7 +53,8 @@ import { ref, computed, h, defineAsyncComponent, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import type { Component } from 'vue';
 import type { Courses, CourseProgressNode } from '@/types/api';
-import { getCourseById, getCourseProgress } from '@/services/courseService';
+import { courseService, learningProgressService } from '@/services';
+import { LearningProgress } from '@/services/learningProgressService';
 
 // --- Components ---
 const CourseDetailHeader = defineAsyncComponent(() => import('@/components/course/student/CourseDetailHeader.vue'));
@@ -69,6 +70,7 @@ const CourseMaterials = defineAsyncComponent(() => import('@/components/course/s
 const route = useRoute();
 const course = ref<Partial<Courses>>({});
 const courseProgress = ref<CourseProgressNode[]>([]);
+const learningProgress = ref<any[]>([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref('chapters');
@@ -84,12 +86,27 @@ onMounted(async () => {
   }
   try {
     isLoading.value = true;
+    // 获取课程详情和课程进度
     const [courseDetails, progressData] = await Promise.all([
-      getCourseById(courseId),
-      getCourseProgress(courseId)
+      courseService.getCourseById(courseId),
+      courseService.getCourseProgress(courseId)
     ]);
     course.value = courseDetails;
     courseProgress.value = progressData;
+    
+    // 使用课程进度数据作为学习进度
+    // 后端返回的是章节树结构，包含status字段
+    if (progressData && progressData.length > 0) {
+      learningProgress.value = progressData;
+    } else {
+      // 如果没有课程进度数据，尝试获取学习进度数据
+      try {
+        const learningProgressData = await learningProgressService.getCourseProgress(courseId);
+        learningProgress.value = learningProgressData;
+      } catch (err) {
+        console.error("获取学习进度失败:", err);
+      }
+    }
   } catch (e: any) {
     console.error("Failed to fetch course details:", e);
     error.value = e.message || '无法加载课程数据。';
@@ -136,7 +153,14 @@ const activeComponent = computed(() => {
 
 const courseDataForChild = computed(() => {
   if (activeTab.value === 'chapters') {
-    return null;
+    console.log('传递给章节组件的数据:', {
+      course: course.value,
+      learningProgress: learningProgress.value
+    });
+    return {
+      course: course.value,
+      learningProgress: learningProgress.value
+    };
   }
   return { course: course.value };
 });

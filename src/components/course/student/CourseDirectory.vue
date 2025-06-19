@@ -16,6 +16,7 @@
         :node="item"
         :active-anchor-id="activeAnchorId"
         :expanded-nodes="expandedNodes"
+        :chapter-progress="chapterProgress"
         @scroll-to-anchor="$emit('scrollToAnchor', $event)"
         @toggle-node="toggleNode"
       />
@@ -24,10 +25,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import type { PropType } from 'vue';
+import { ref, computed, watch, defineProps, defineEmits, defineExpose, PropType } from 'vue';
 import type { NestedOutlineItem } from '@/composables';
 import DirectoryNode from './DirectoryNode.vue';
+import { LearningStatus } from '@/services/learningProgressService';
 
 const props = defineProps({
   outline: {
@@ -38,6 +39,10 @@ const props = defineProps({
     type: String as PropType<string | null>,
     default: null,
   },
+  chapterProgress: {
+    type: Object as PropType<Record<string, LearningStatus>>,
+    default: () => ({}),
+  }
 });
 
 defineEmits(['scrollToAnchor']);
