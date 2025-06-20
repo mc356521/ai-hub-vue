@@ -77,12 +77,12 @@ export function useLearningProgress(
       } else {
         // 如果没有进度记录，创建一个新的
         currentProgress.value = {
-          userId: userStore.user!.id,
           courseId: courseId.value,
           chapterKey,
           status: LearningStatus.IN_PROGRESS,
           progressPercentage: 0,
-          readingTimeSeconds: 0
+          readingTimeSeconds: 0,
+          userId: '' // 后端会自动填充，这里只是为了满足类型要求
         };
       }
     } catch (error) {
@@ -101,7 +101,7 @@ export function useLearningProgress(
     
     if (elapsedSeconds <= 0 && !force) return;
     
-    // 累计阅读时间
+    // 累计阅读时间 (仅用于前端显示)
     readingTimeSeconds.value += elapsedSeconds;
     
     // 将更新添加到队列
@@ -121,10 +121,12 @@ export function useLearningProgress(
         
         // 更新当前章节的进度
         if (mergedUpdates[currentChapterKey.value]) {
+          // 只发送增量时间，而不是累计时间
+          const incrementalTime = mergedUpdates[currentChapterKey.value];
           await updateProgress({
             courseId: courseId.value,
             chapterKey: currentChapterKey.value,
-            readingTimeSeconds: readingTimeSeconds.value,
+            readingTimeSeconds: incrementalTime, // 只发送增量时间
             status: LearningStatus.IN_PROGRESS,
             // 如果阅读时间超过30秒，视为有进度
             progressPercentage: readingTimeSeconds.value > 30 ? 50 : 10
@@ -144,6 +146,10 @@ export function useLearningProgress(
     if (!currentChapterKey.value || !courseId.value) return;
     
     try {
+      // 先确保最新的阅读时间已更新
+      await updateReadingProgress(true);
+      
+      // 然后标记为已完成
       await updateProgress({
         courseId: courseId.value,
         chapterKey: currentChapterKey.value,

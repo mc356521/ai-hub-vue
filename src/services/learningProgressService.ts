@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useUserStore } from '@/store/user';
+import apiClient from './index';
 
 /**
  * 学习进度状态枚举
@@ -15,7 +16,7 @@ export enum LearningStatus {
  */
 export interface LearningProgress {
   id?: number;
-  userId: number;
+  userId: string; // 用户标识
   courseId: number;
   chapterKey: string;
   status: LearningStatus;
@@ -47,17 +48,17 @@ export interface UpdateProgressParams {
  */
 export async function getCourseProgress(courseId: number): Promise<LearningProgress[]> {
   const userStore = useUserStore();
-  const userId = userStore.user?.id;
   
-  if (!userId) {
+  if (!userStore.isLoggedIn) {
     throw new Error('用户未登录');
   }
   
   try {
-    const response = await axios.get(`/learning-progress`, {
-      params: { userId, courseId }
+    // 后端会从token中获取当前用户信息，不需要传递userId
+    const response = await apiClient.get('/learning-progress', {
+      params: { courseId }
     });
-    return response.data;
+    return response as unknown as LearningProgress[];
   } catch (error) {
     console.error('获取学习进度失败:', error);
     throw error;
@@ -72,17 +73,17 @@ export async function getCourseProgress(courseId: number): Promise<LearningProgr
  */
 export async function getChapterProgress(courseId: number, chapterKey: string): Promise<LearningProgress | null> {
   const userStore = useUserStore();
-  const userId = userStore.user?.id;
   
-  if (!userId) {
+  if (!userStore.isLoggedIn) {
     throw new Error('用户未登录');
   }
   
   try {
-    const response = await axios.get(`/learning-progress/chapter`, {
-      params: { userId, courseId, chapterKey }
+    // 后端会从token中获取当前用户信息，不需要传递userId
+    const response = await apiClient.get('/learning-progress/chapter', {
+      params: { courseId, chapterKey }
     });
-    return response.data;
+    return response as unknown as LearningProgress;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       return null; // 章节进度不存在
@@ -99,18 +100,15 @@ export async function getChapterProgress(courseId: number, chapterKey: string): 
  */
 export async function updateProgress(params: UpdateProgressParams): Promise<LearningProgress> {
   const userStore = useUserStore();
-  const userId = userStore.user?.id;
   
-  if (!userId) {
+  if (!userStore.isLoggedIn) {
     throw new Error('用户未登录');
   }
   
   try {
-    const response = await axios.post(`/learning-progress/update`, {
-      userId,
-      ...params
-    });
-    return response.data;
+    // 后端会从token中获取当前用户信息，不需要传递userId
+    const response = await apiClient.post('/learning-progress/update', params);
+    return response as unknown as LearningProgress;
   } catch (error) {
     console.error('更新学习进度失败:', error);
     throw error;
@@ -124,18 +122,17 @@ export async function updateProgress(params: UpdateProgressParams): Promise<Lear
  */
 export async function batchUpdateProgress(progressRecords: UpdateProgressParams[]): Promise<{ success: boolean }> {
   const userStore = useUserStore();
-  const userId = userStore.user?.id;
   
-  if (!userId) {
+  if (!userStore.isLoggedIn) {
     throw new Error('用户未登录');
   }
   
   try {
-    const response = await axios.post(`/learning-progress/batch-update`, {
-      userId,
+    // 后端会从token中获取当前用户信息，不需要传递userId
+    const response = await apiClient.post('/learning-progress/batch-update', {
       progressRecords
     });
-    return response.data;
+    return response as unknown as { success: boolean };
   } catch (error) {
     console.error('批量更新学习进度失败:', error);
     throw error;

@@ -14,10 +14,10 @@ export default defineConfig({
   server: {
     proxy: {
       // 使用正则表达式匹配所有API请求路径
-      '^/auth|/classes|/courses|/semesters|/users|/test': {
+      '^/api': {
         target: 'http://localhost:8080', // 请确保这是您的后端服务地址
         changeOrigin: true,
-        // 无需重写路径，因为前端请求的路径和后端期望的路径一致
+        rewrite: (path) => path.replace(/^\/api/, '')
       },
     }
   }

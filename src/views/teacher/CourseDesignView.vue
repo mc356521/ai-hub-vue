@@ -42,9 +42,27 @@
           <CourseChapter v-if="course.id" :course-id="Number(course.id)" />
         </div>
         <div v-if="activeTab === 'tasks'">
-          <p>学习任务内容...</p>
+          <LearningTasks v-if="course.id && selectedClassId" :course-id="Number(course.id)" :class-id="selectedClassId" />
+          <div v-else class="flex items-center justify-center h-full text-center text-quantum-gray p-8">
+            <div>
+              <p v-if="!course.id" class="font-medium">请先等待课程加载...</p>
+              <p v-else-if="classes.length === 0" class="font-medium">您还没有创建任何班级，请先去创建一个。</p>
+              <p v-else class="font-medium">请在上方选择一个班级以查看或管理学习任务。</p>
+            </div>
+          </div>
         </div>
-   
+        <div v-if="activeTab === 'discussion'">
+          <p class="text-center text-quantum-gray p-8">互动讨论管理功能正在开发中...</p>
+        </div>
+        <div v-if="activeTab === 'assignments'">
+          <p class="text-center text-quantum-gray p-8">作业提交管理功能正在开发中...</p>
+        </div>
+        <div v-if="activeTab === 'exams'">
+          <p class="text-center text-quantum-gray p-8">在线考试管理功能正在开发中...</p>
+        </div>
+        <div v-if="activeTab === 'materials'">
+          <p class="text-center text-quantum-gray p-8">课程资料管理功能正在开发中...</p>
+        </div>
       </div>
     </div>
   </div>
@@ -59,6 +77,7 @@ import type { Courses, MyClassInfo } from '../../types/api';
 import { ListBulletIcon, CheckCircleIcon, ChatBubbleLeftRightIcon, PencilSquareIcon, ShieldCheckIcon, FolderIcon } from '@heroicons/vue/24/outline';
 
 const CourseChapter = defineAsyncComponent(() => import('@/components/course/teacher/CourseChapter.vue'));
+const LearningTasks = defineAsyncComponent(() => import('@/components/course/teacher/LearningTasks.vue'));
 
 const route = useRoute();
 const course = ref<Partial<Courses>>({

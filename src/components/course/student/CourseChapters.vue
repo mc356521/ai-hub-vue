@@ -157,6 +157,89 @@ const formatReadingTime = computed(() => {
 // 章节进度映射，用于在目录中显示进度状态
 const chapterProgressMap = ref<Record<string, LearningStatus>>({});
 
+// --- 阅读进度完成检测 ---
+// 记录章节阅读进度，避免重复标记
+const chapterReadingProgress = ref<Record<string, boolean>>({});
+// 最小阅读时间要求（秒）
+const MIN_READING_TIME = 30;
+// 滚动进度阈值，默认为90%
+const SCROLL_THRESHOLD = 0.9;
+// 滚动事件防抖延迟（毫秒）
+const SCROLL_DEBOUNCE_DELAY = 1000;
+// 上次滚动检测时间
+let lastScrollCheckTime = 0;
+
+// 检测阅读进度并自动标记完成
+const checkAndMarkCompleted = () => {
+  if (!contentPanel.value || !activeAnchorId.value) return;
+
+  // 应用防抖，避免频繁触发
+  const now = Date.now();
+  if (now - lastScrollCheckTime < SCROLL_DEBOUNCE_DELAY) return;
+  lastScrollCheckTime = now;
+  
+  // 当前章节ID
+  const currentId = activeAnchorId.value;
+  
+  // 如果章节已经标记为完成，则跳过
+  if (chapterProgressMap.value[currentId] === LearningStatus.COMPLETED) return;
+  if (chapterReadingProgress.value[currentId]) return;
+  
+  // 计算滚动进度
+  const element = contentPanel.value;
+  const scrollPosition = window.scrollY;
+  const windowHeight = window.innerHeight;
+  const documentHeight = Math.max(
+    document.body.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.clientHeight,
+    document.documentElement.scrollHeight,
+    document.documentElement.offsetHeight
+  );
+  
+  // 如果文档较短，则整个文档都视为可见
+  if (documentHeight <= windowHeight) {
+    if (readingTimeSeconds.value >= MIN_READING_TIME) {
+      markChapterAsCompleted();
+      chapterReadingProgress.value[currentId] = true;
+      console.log(`章节 ${currentId} 已自动标记为完成 (短文档)`);
+    }
+    return;
+  }
+  
+  // 计算滚动百分比
+  const scrollPercentage = (scrollPosition + windowHeight) / documentHeight;
+  
+  // 如果已经滚动到底部附近并且阅读时间足够
+  if (scrollPercentage >= SCROLL_THRESHOLD && readingTimeSeconds.value >= MIN_READING_TIME) {
+    markChapterAsCompleted();
+    chapterReadingProgress.value[currentId] = true;
+    console.log(`章节 ${currentId} 已自动标记为完成 (滚动至: ${Math.round(scrollPercentage * 100)}%)`);
+  }
+};
+
+// 添加滚动监听器
+let scrollListener: (() => void) | null = null;
+
+// 设置自动完成检测
+const setupAutoCompletionDetection = () => {
+  // 移除之前的监听器
+  if (scrollListener) {
+    window.removeEventListener('scroll', scrollListener);
+  }
+  
+  // 创建新的监听器
+  scrollListener = () => {
+    checkAndMarkCompleted();
+  };
+  
+  // 添加滚动监听器
+  window.addEventListener('scroll', scrollListener, { passive: true });
+  
+  // 初始检测
+  checkAndMarkCompleted();
+};
+
 // 查找最佳匹配的ID
 const findBestMatchingId = (items: NestedOutlineItem[], chapter: any): string | null => {
   // 简化版匹配逻辑，避免类型错误
@@ -204,7 +287,7 @@ watch(() => props.learningProgress, (newProgress) => {
     console.log('没有学习进度数据');
     return;
   }
-  
+
   console.log('收到学习进度数据:', newProgress);
   
   // 将学习进度数据转换为章节ID到状态的映射
@@ -239,10 +322,10 @@ watch(() => props.learningProgress, (newProgress) => {
       // 处理子节点
       if (item.children && item.children.length > 0) {
         buildMappings(item.children, level + 1, chapterKey);
-      }
-    });
-  };
-  
+    }
+  });
+};
+
   // 如果大纲存在，构建映射
   if (outline.value && outline.value.length > 0) {
     buildMappings(outline.value);
@@ -308,6 +391,18 @@ watch(() => props.learningProgress, (newProgress) => {
 // 定期更新学习进度
 let updateInterval: number | null = null;
 
+// 监视活动锚点ID的变化
+watch(activeAnchorId, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    // 重置新章节的阅读时间
+    chapterReadingProgress.value[newId] = false;
+    // 检查是否需要自动标记完成
+    setTimeout(() => {
+      checkAndMarkCompleted();
+    }, 1000);
+  }
+});
+
 onMounted(() => {
   // 每5分钟更新一次学习进度
   updateInterval = window.setInterval(() => {
@@ -320,13 +415,20 @@ onMounted(() => {
   // 延迟初始化进度
   setTimeout(() => {
     initializeProgress();
+    // 设置自动完成检测
+    setupAutoCompletionDetection();
   }, 1000);
 });
 
-// 组件卸载时清除定时器
+// 组件卸载时清除定时器和事件监听器
 onUnmounted(() => {
   if (updateInterval !== null) {
     clearInterval(updateInterval);
+  }
+  
+  // 移除滚动监听器
+  if (scrollListener) {
+    window.removeEventListener('scroll', scrollListener);
   }
 });
 
@@ -337,6 +439,11 @@ const debugProgress = () => {
   console.log('大纲结构:', outline.value);
   console.log('学习进度数据:', props.learningProgress);
   console.log('章节进度映射:', chapterProgressMap.value);
+  console.log('章节阅读进度:', chapterReadingProgress.value);
+  console.log('当前滚动位置:', window.scrollY);
+  console.log('窗口高度:', window.innerHeight);
+  console.log('文档高度:', document.documentElement.scrollHeight);
+  console.log('滚动百分比:', (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight);
   
   // 手动创建进度映射
   if (outline.value && outline.value.length > 0) {
